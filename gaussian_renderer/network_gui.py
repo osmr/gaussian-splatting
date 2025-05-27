@@ -9,6 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import logging
 import torch
 import traceback
 import socket
@@ -35,7 +36,7 @@ def try_connect():
     global conn, addr, listener
     try:
         conn, addr = listener.accept()
-        print(f"\nConnected by {addr}")
+        logging.info(f"\nConnected by {addr}")
         conn.settimeout(None)
     except Exception as inst:
         pass
@@ -78,7 +79,7 @@ def receive():
             full_proj_transform[:,1] = -full_proj_transform[:,1]
             custom_cam = MiniCam(width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform)
         except Exception as e:
-            print("")
+            logging.info("")
             traceback.print_exc()
             raise e
         return custom_cam, do_training, do_shs_python, do_rot_scale_python, keep_alive, scaling_modifier

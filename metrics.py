@@ -9,6 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import logging
 from pathlib import Path
 import os
 from PIL import Image
@@ -39,11 +40,11 @@ def evaluate(model_paths):
     per_view_dict = {}
     full_dict_polytopeonly = {}
     per_view_dict_polytopeonly = {}
-    print("")
+    logging.info("")
 
     for scene_dir in model_paths:
         try:
-            print("Scene:", scene_dir)
+            logging.info("Scene: {}".format(scene_dir))
             full_dict[scene_dir] = {}
             per_view_dict[scene_dir] = {}
             full_dict_polytopeonly[scene_dir] = {}
@@ -52,7 +53,7 @@ def evaluate(model_paths):
             test_dir = Path(scene_dir) / "test"
 
             for method in os.listdir(test_dir):
-                print("Method:", method)
+                logging.info("Method: {}".format(method))
 
                 full_dict[scene_dir][method] = {}
                 per_view_dict[scene_dir][method] = {}
@@ -73,10 +74,10 @@ def evaluate(model_paths):
                     psnrs.append(psnr(renders[idx], gts[idx]))
                     lpipss.append(lpips(renders[idx], gts[idx], net_type='vgg'))
 
-                print("  SSIM : {:>12.7f}".format(torch.tensor(ssims).mean(), ".5"))
-                print("  PSNR : {:>12.7f}".format(torch.tensor(psnrs).mean(), ".5"))
-                print("  LPIPS: {:>12.7f}".format(torch.tensor(lpipss).mean(), ".5"))
-                print("")
+                logging.info("  SSIM : {:>12.7f}".format(torch.tensor(ssims).mean(), ".5"))
+                logging.info("  PSNR : {:>12.7f}".format(torch.tensor(psnrs).mean(), ".5"))
+                logging.info("  LPIPS: {:>12.7f}".format(torch.tensor(lpipss).mean(), ".5"))
+                logging.info("")
 
                 full_dict[scene_dir][method].update({"SSIM": torch.tensor(ssims).mean().item(),
                                                         "PSNR": torch.tensor(psnrs).mean().item(),
@@ -90,7 +91,7 @@ def evaluate(model_paths):
             with open(scene_dir + "/per_view.json", 'w') as fp:
                 json.dump(per_view_dict[scene_dir], fp, indent=True)
         except:
-            print("Unable to compute metrics for model", scene_dir)
+            logging.info("Unable to compute metrics for model {}".format(scene_dir))
 
 if __name__ == "__main__":
     device = torch.device("cuda:0")

@@ -9,6 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import logging
 import torch
 from torch import nn
 import numpy as np
@@ -35,8 +36,8 @@ class Camera(nn.Module):
         try:
             self.data_device = torch.device(data_device)
         except Exception as e:
-            print(e)
-            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device" )
+            logging.info(e)
+            logging.info(f"[Warning] Custom device {data_device} failed, fallback to default cuda device" )
             self.data_device = torch.device("cuda")
 
         resized_image_rgb = PILtoTorch(image, resolution)

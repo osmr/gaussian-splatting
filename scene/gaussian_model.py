@@ -9,6 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import logging
 import torch
 import numpy as np
 from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
@@ -154,7 +155,7 @@ class GaussianModel:
         features[:, :3, 0 ] = fused_color
         features[:, 3:, 1:] = 0.0
 
-        print("Number of points at initialisation : ", fused_point_cloud.shape[0])
+        logging.info("Number of points at initialisation : {}".format(fused_point_cloud.shape[0]))
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd.points)).float().cuda()), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 3)
@@ -268,9 +269,9 @@ class GaussianModel:
                 with open(exposure_file, "r") as f:
                     exposures = json.load(f)
                 self.pretrained_exposures = {image_name: torch.FloatTensor(exposures[image_name]).requires_grad_(False).cuda() for image_name in exposures}
-                print(f"Pretrained exposures loaded.")
+                logging.info(f"Pretrained exposures loaded.")
             else:
-                print(f"No exposure to be loaded at {exposure_file}")
+                logging.info(f"No exposure to be loaded at {exposure_file}")
                 self.pretrained_exposures = None
 
         xyz = np.stack((np.asarray(plydata.elements[0]["x"]),

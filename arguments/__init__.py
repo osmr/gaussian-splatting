@@ -9,6 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import logging
 from argparse import ArgumentParser, Namespace
 import sys
 import os
@@ -106,12 +107,12 @@ def get_combined_args(parser : ArgumentParser):
 
     try:
         cfgfilepath = os.path.join(args_cmdline.model_path, "cfg_args")
-        print("Looking for config file in", cfgfilepath)
+        logging.info("Looking for config file in {}".format(cfgfilepath))
         with open(cfgfilepath) as cfg_file:
-            print("Config file found: {}".format(cfgfilepath))
+            logging.info("Config file found: {}".format(cfgfilepath))
             cfgfile_string = cfg_file.read()
     except TypeError:
-        print("Config file not found at")
+        logging.info("Config file not found at")
         pass
     args_cfgfile = eval(cfgfile_string)
 

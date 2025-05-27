@@ -1,6 +1,7 @@
 import numpy as np
 import argparse
 import cv2
+import logging
 from joblib import delayed, Parallel
 import json
 from read_write_model import *
@@ -91,4 +92,4 @@ if __name__ == '__main__':
     with open(f"{args.base_dir}/sparse/0/depth_params.json", "w") as f:
         json.dump(depth_params, f, indent=2)
 
-    print(0)
+    logging.info(0)

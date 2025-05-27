@@ -11,6 +11,7 @@
 
 import os
 import sys
+import logging
 from PIL import Image
 from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
@@ -72,9 +73,11 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, depths_params, images_fold
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
+        # logging.info('\r')
         # the exact output you're looking for:
         sys.stdout.write("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
         sys.stdout.flush()
+        # logging.info("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
 
         extr = cam_extrinsics[key]
         intr = cam_intrinsics[extr.camera_id]
@@ -103,7 +106,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, depths_params, images_fold
             try:
                 depth_params = depths_params[extr.name[:-n_remove]]
             except:
-                print("\n", key, "not found in depths_params")
+                logging.info("\n{} not found in depths_params".format(key))
 
         image_path = os.path.join(images_folder, extr.name)
         image_name = extr.name
@@ -115,6 +118,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, depths_params, images_fold
         cam_infos.append(cam_info)
 
     sys.stdout.write('\n')
+    # logging.info('\n')
     return cam_infos
 
 def fetchPly(path):
@@ -170,17 +174,17 @@ def readColmapSceneInfo(path, images, depths, eval, train_test_exp, llffhold=8):
                 depths_params[key]["med_scale"] = med_scale
 
         except FileNotFoundError:
-            print(f"Error: depth_params.json file not found at path '{depth_params_file}'.")
+            logging.info(f"Error: depth_params.json file not found at path '{depth_params_file}'.")
             sys.exit(1)
         except Exception as e:
-            print(f"An unexpected error occurred when trying to open depth_params.json file: {e}")
+            logging.info(f"An unexpected error occurred when trying to open depth_params.json file: {e}")
             sys.exit(1)
 
     if eval:
         if "360" in path:
             llffhold = 8
         if llffhold:
-            print("------------LLFF HOLD-------------")
+            logging.info("------------LLFF HOLD-------------")
             cam_names = [cam_extrinsics[cam_id].name for cam_id in cam_extrinsics]
             cam_names = sorted(cam_names)
             test_cam_names_list = [name for idx, name in enumerate(cam_names) if idx % llffhold == 0]
@@ -206,7 +210,7 @@ def readColmapSceneInfo(path, images, depths, eval, train_test_exp, llffhold=8):
     bin_path = os.path.join(path, "sparse/0/points3D.bin")
     txt_path = os.path.join(path, "sparse/0/points3D.txt")
     if not os.path.exists(ply_path):
-        print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
+        logging.info("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
             xyz, rgb, _ = read_points3D_binary(bin_path)
         except:
@@ -273,9 +277,9 @@ def readCamerasFromTransforms(path, transformsfile, depths_folder, white_backgro
 def readNerfSyntheticInfo(path, white_background, depths, eval, extension=".png"):
 
     depths_folder=os.path.join(path, depths) if depths != "" else ""
-    print("Reading Training Transforms")
+    logging.info("Reading Training Transforms")
     train_cam_infos = readCamerasFromTransforms(path, "transforms_train.json", depths_folder, white_background, False, extension)
-    print("Reading Test Transforms")
+    logging.info("Reading Test Transforms")
     test_cam_infos = readCamerasFromTransforms(path, "transforms_test.json", depths_folder, white_background, True, extension)
     
     if not eval:
@@ -288,7 +292,7 @@ def readNerfSyntheticInfo(path, white_background, depths, eval, extension=".png"
     if not os.path.exists(ply_path):
         # Since this data set has no colmap data, we start with random points
         num_pts = 100_000
-        print(f"Generating random point cloud ({num_pts})...")
+        logging.info(f"Generating random point cloud ({num_pts})...")
         
         # We create random points inside the bounds of the synthetic Blender scenes
         xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3

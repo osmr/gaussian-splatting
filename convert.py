@@ -88,7 +88,7 @@ for file in files:
     shutil.move(source_file, destination_file)
 
 if(args.resize):
-    print("Copying and resizing...")
+    logging.info("Copying and resizing...")
 
     # Resize images.
     os.makedirs(args.source_path + "/images_2", exist_ok=True)
@@ -121,4 +121,4 @@ if(args.resize):
             logging.error(f"12.5% resize failed with code {exit_code}. Exiting.")
             exit(exit_code)
 
-print("Done.")
+logging.info("Done.")
