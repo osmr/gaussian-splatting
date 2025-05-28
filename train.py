@@ -314,7 +314,8 @@ if __name__ == "__main__":
         logging_dir_path=root_dir_path,
         logging_file_name=args.log,
         main_script_path=__file__,
-        script_args=args)
+        script_args=args,
+        check_cuda=True)
 
     logging.info("Optimizing " + args.model_path)
 
