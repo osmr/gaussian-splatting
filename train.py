@@ -9,6 +9,9 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+from cvutil.random import init_rand
+init_rand(seed=0, forced=True, hard=True)
+
 import os
 import torch
 from random import randint
@@ -42,7 +45,6 @@ except:
 
 import logging
 from cvutil.logger import initialize_logging
-from cvutil.random import init_rand
 
 
 def training(dataset,
@@ -306,7 +308,7 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 
-    args.seed = init_rand(seed=args.seed)
+    args.seed = init_rand(seed=args.seed, forced=True, hard=True)
     root_dir_path = args.model_path
     logger, _ = initialize_logging(
         logging_dir_path=root_dir_path,
@@ -317,7 +319,7 @@ if __name__ == "__main__":
     logging.info("Optimizing " + args.model_path)
 
     # Initialize system state (RNG)
-    safe_state(args.quiet)
+    # safe_state(args.quiet)
 
     # Start GUI server, configure and run training
     if not args.disable_viewer:
