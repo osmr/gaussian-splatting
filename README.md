@@ -36,10 +36,7 @@ Abstract: *Radiance Field methods have recently revolutionized novel-view synthe
 git clone git@github.com:osmr/gaussian-splatting.git --recursive
 ```
 
-#In "gaussian-splatting/submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.h" add:
-#```
-##include <cstdint>
-#```
+In "gaussian-splatting/submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.h" add: `#include <cstdint>`
 
 ```
 pip install --upgrade pip
