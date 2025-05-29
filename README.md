@@ -48,10 +48,11 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn
 pip install submodules/fused-ssim
+pip install -e submodules/cvutil
 pip install tqdm
 pip install plyfile
 pip install opencv-python
-pip install cvutil
+#pip install cvutil
 pip install tensorboard
 ```
 
