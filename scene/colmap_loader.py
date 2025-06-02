@@ -1,13 +1,13 @@
-#
-# Copyright (C) 2023, Inria
-# GRAPHDECO research group, https://team.inria.fr/graphdeco
-# All rights reserved.
-#
-# This software is free for non-commercial, research and evaluation use 
-# under the terms of the LICENSE.md file.
-#
-# For inquiries contact  george.drettakis@inria.fr
-#
+"""
+    # Copyright (C) 2023, Inria
+    # GRAPHDECO research group, https://team.inria.fr/graphdeco
+    # All rights reserved.
+    #
+    # This software is free for non-commercial, research and evaluation use
+    # under the terms of the LICENSE.md file.
+    #
+    # For inquiries contact  george.drettakis@inria.fr
+"""
 
 import numpy as np
 import collections
@@ -52,6 +52,7 @@ def qvec2rotmat(qvec):
          2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
          1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
 
+
 def rotmat2qvec(R):
     Rxx, Ryx, Rzx, Rxy, Ryy, Rzy, Rxz, Ryz, Rzz = R.flat
     K = np.array([
@@ -65,9 +66,11 @@ def rotmat2qvec(R):
         qvec *= -1
     return qvec
 
+
 class Image(BaseImage):
     def qvec2rotmat(self):
         return qvec2rotmat(self.qvec)
+
 
 def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
     """Read and unpack the next bytes from a binary file.
@@ -79,6 +82,7 @@ def read_next_bytes(fid, num_bytes, format_char_sequence, endian_character="<"):
     """
     data = fid.read(num_bytes)
     return struct.unpack(endian_character + format_char_sequence, data)
+
 
 def read_points3D_text(path):
     """
@@ -98,7 +102,6 @@ def read_points3D_text(path):
             line = line.strip()
             if len(line) > 0 and line[0] != "#":
                 num_points += 1
-
 
     xyzs = np.empty((num_points, 3))
     rgbs = np.empty((num_points, 3))
@@ -122,14 +125,13 @@ def read_points3D_text(path):
 
     return xyzs, rgbs, errors
 
+
 def read_points3D_binary(path_to_model_file):
     """
     see: src/base/reconstruction.cc
         void Reconstruction::ReadPoints3DBinary(const std::string& path)
         void Reconstruction::WritePoints3DBinary(const std::string& path)
     """
-
-
     with open(path_to_model_file, "rb") as fid:
         num_points = read_next_bytes(fid, 8, "Q")[0]
 
@@ -152,6 +154,7 @@ def read_points3D_binary(path_to_model_file):
             rgbs[p_id] = rgb
             errors[p_id] = error
     return xyzs, rgbs, errors
+
 
 def read_intrinsics_text(path):
     """
@@ -176,6 +179,7 @@ def read_intrinsics_text(path):
                                             width=width, height=height,
                                             params=params)
     return cameras
+
 
 def read_extrinsics_binary(path_to_model_file):
     """

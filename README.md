@@ -49,7 +49,6 @@ pip install -e submodules/cvutil
 pip install tqdm
 pip install plyfile
 pip install opencv-python
-#pip install cvutil
 pip install tensorboard
 ```
 
