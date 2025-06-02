@@ -24,7 +24,8 @@ addr = None
 
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-def init(wish_host, wish_port):
+def init(wish_host,
+         wish_port):
     global host, port, listener
     host = wish_host
     port = wish_port

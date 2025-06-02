@@ -19,12 +19,12 @@ from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui
 import sys
 from scene import Scene, GaussianModel
-from utils.general_utils import safe_state, get_expon_lr_func
+from utils.general_utils import get_expon_lr_func
 import uuid
 from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
-from arguments import ModelParams, PipelineParams, OptimizationParams
+from arguments import GroupParams, ModelParams, PipelineParams, OptimizationParams
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
@@ -47,22 +47,56 @@ import logging
 from cvutil.logger import initialize_logging
 
 
-def training(dataset,
-             opt,
-             pipe,
-             testing_iterations,
-             saving_iterations,
-             checkpoint_iterations,
-             checkpoint,
-             debug_from,
+def prepare_output_dir(model_path: str):
+    if not args.model_path:
+        if os.getenv('OAR_JOB_ID'):
+            unique_str = os.getenv('OAR_JOB_ID')
+        else:
+            unique_str = str(uuid.uuid4())
+        model_path = os.path.join("./output/", unique_str[0:10])
+
+    # Set up output folder
+    logging.info("Output folder: {}".format(model_path))
+    os.makedirs(model_path, exist_ok=True)
+
+    return model_path
+
+
+def prepare_tb_logger(model_path: str,
+                      use_tb: bool):
+    # Create Tensorboard writer
+    tb_writer = None
+    if use_tb:
+        if TENSORBOARD_FOUND:
+            tb_writer = SummaryWriter(model_path)
+        else:
+            logging.info("Tensorboard not available: not logging progress")
+    return tb_writer
+
+
+def training(dataset: GroupParams,
+             opt: GroupParams,
+             pipe: GroupParams,
+             testing_iterations: list[int],
+             saving_iterations: list[int],
+             checkpoint_iterations: list[int],
+             checkpoint: str | None,
+             debug_from: int,
              use_tb: bool):
 
     if not SPARSE_ADAM_AVAILABLE and opt.optimizer_type == "sparse_adam":
         sys.exit(f"Trying to use sparse adam but it is not installed, please install the correct rasterizer using pip install [3dgs_accel].")
 
     first_iter = 0
-    tb_writer = prepare_output_and_logger(dataset, use_tb=use_tb)
-    gaussians = GaussianModel(dataset.sh_degree, opt.optimizer_type)
+
+    dataset.model_path = prepare_output_dir(model_path=dataset.model_path)
+    tb_writer = prepare_tb_logger(
+        model_path=dataset.model_path,
+        use_tb=use_tb)
+
+    gaussians = GaussianModel(
+        sh_degree=dataset.sh_degree,
+        optimizer_type=opt.optimizer_type)
     scene = Scene(dataset, gaussians)
     gaussians.training_setup(opt)
     if checkpoint:
@@ -204,31 +238,17 @@ def training(dataset,
                 logging.info("\n[ITER {}] Saving Checkpoint".format(iteration))
                 torch.save((gaussians.capture(), iteration), scene.model_path + "/chkpnt" + str(iteration) + ".pth")
 
-def prepare_output_and_logger(args,
-                              use_tb: bool):
-    if not args.model_path:
-        if os.getenv('OAR_JOB_ID'):
-            unique_str=os.getenv('OAR_JOB_ID')
-        else:
-            unique_str = str(uuid.uuid4())
-        args.model_path = os.path.join("./output/", unique_str[0:10])
-        
-    # Set up output folder
-    logging.info("Output folder: {}".format(args.model_path))
-    os.makedirs(args.model_path, exist_ok = True)
-    with open(os.path.join(args.model_path, "cfg_args"), 'w') as cfg_log_f:
-        cfg_log_f.write(str(Namespace(**vars(args))))
-
-    # Create Tensorboard writer
-    tb_writer = None
-    if use_tb:
-        if TENSORBOARD_FOUND:
-            tb_writer = SummaryWriter(args.model_path)
-        else:
-            logging.info("Tensorboard not available: not logging progress")
-    return tb_writer
-
-def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs, train_test_exp):
+def training_report(tb_writer,
+                    iteration,
+                    Ll1,
+                    loss,
+                    l1_loss,
+                    elapsed,
+                    testing_iterations,
+                    scene : Scene,
+                    renderFunc,
+                    renderArgs,
+                    train_test_exp):
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
@@ -319,22 +339,23 @@ if __name__ == "__main__":
 
     logging.info("Optimizing " + args.model_path)
 
-    # Initialize system state (RNG)
-    # safe_state(args.quiet)
-
     # Start GUI server, configure and run training
     if not args.disable_viewer:
-        network_gui.init(args.ip, args.port)
+        network_gui.init(
+            wish_host=args.ip,
+            wish_port=args.port)
+
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
+
     training(
-        lp.extract(args),
-        op.extract(args),
-        pp.extract(args),
-        args.test_iterations,
-        args.save_iterations,
-        args.checkpoint_iterations,
-        args.start_checkpoint,
-        args.debug_from,
+        dataset=lp.extract(args),
+        opt=op.extract(args),
+        pipe=pp.extract(args),
+        testing_iterations=args.test_iterations,
+        saving_iterations=args.save_iterations,
+        checkpoint_iterations=args.checkpoint_iterations,
+        checkpoint=args.start_checkpoint,
+        debug_from=args.debug_from,
         use_tb=args.tb)
 
     # All done
