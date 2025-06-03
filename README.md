@@ -33,14 +33,13 @@ Abstract: *Radiance Field methods have recently revolutionized novel-view synthe
 ## Deployment
 
 ```
-git clone git@github.com:osmr/gaussian-splatting.git --recursive
+git clone --recursive git@github.com:osmr/gaussian-splatting.git
 ```
 
 In "gaussian-splatting/submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.h" add: `#include <cstdint>`
 
 ```
-pip install --upgrade pip
-pip install setuptools wheel
+pip install --upgrade pip setuptools wheel
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn

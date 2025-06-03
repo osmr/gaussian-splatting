@@ -10,8 +10,10 @@
 """
 
 import logging
-from scene.cameras import Camera
+from arguments import GroupParams
+from scene.camera import Camera
 import numpy as np
+from scene.dataset_readers import CameraInfo
 from utils.graphics_utils import fov2focal
 from PIL import Image
 import cv2
@@ -19,12 +21,12 @@ import cv2
 WARNED = False
 
 
-def loadCam(args,
-            id,
-            cam_info,
-            resolution_scale,
-            is_nerf_synthetic,
-            is_test_dataset):
+def loadCam(args: GroupParams,
+            id: int,
+            cam_info: CameraInfo,
+            resolution_scale: float,
+            is_nerf_synthetic: bool,
+            is_test_dataset: bool):
     image = Image.open(cam_info.image_path)
 
     if cam_info.depth_path != "":
@@ -85,11 +87,11 @@ def loadCam(args,
         is_test_view=cam_info.is_test)
 
 
-def cameraList_from_camInfos(cam_infos,
-                             resolution_scale,
-                             args,
-                             is_nerf_synthetic,
-                             is_test_dataset):
+def cameraList_from_camInfos(cam_infos: list[CameraInfo],
+                             resolution_scale: float,
+                             args: GroupParams,
+                             is_nerf_synthetic: bool,
+                             is_test_dataset: bool):
     camera_list = []
 
     for id, c in enumerate(cam_infos):
@@ -98,8 +100,8 @@ def cameraList_from_camInfos(cam_infos,
     return camera_list
 
 
-def camera_to_JSON(id,
-                   camera: Camera):
+def camera_to_JSON(id: int,
+                   camera: CameraInfo):
     Rt = np.zeros((4, 4))
     Rt[:3, :3] = camera.R.transpose()
     Rt[:3, 3] = camera.T

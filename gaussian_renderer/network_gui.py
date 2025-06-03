@@ -14,7 +14,7 @@ import torch
 import traceback
 import socket
 import json
-from scene.cameras import MiniCam
+from scene.mini_cam import MiniCam
 
 host = "127.0.0.1"
 port = 6009

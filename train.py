@@ -97,7 +97,7 @@ def training(dataset: GroupParams,
     gaussians = GaussianModel(
         sh_degree=dataset.sh_degree,
         optimizer_type=opt.optimizer_type)
-    scene = Scene(dataset, gaussians)
+    scene = Scene(gaussians=gaussians, args=dataset)
     gaussians.training_setup(opt)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)

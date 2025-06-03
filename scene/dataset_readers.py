@@ -23,21 +23,7 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
-
-
-class CameraInfo(NamedTuple):
-    uid: int
-    R: np.array
-    T: np.array
-    FovY: np.array
-    FovX: np.array
-    depth_params: dict
-    image_path: str
-    image_name: str
-    depth_path: str
-    width: int
-    height: int
-    is_test: bool
+from scene.camera_info import CameraInfo
 
 
 class SceneInfo(NamedTuple):
@@ -121,9 +107,19 @@ def readColmapCameras(cam_extrinsics,
         image_name = extr.name
         depth_path = os.path.join(depths_folder, f"{extr.name[:-n_remove]}.png") if depths_folder != "" else ""
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, depth_params=depth_params,
-                              image_path=image_path, image_name=image_name, depth_path=depth_path,
-                              width=width, height=height, is_test=image_name in test_cam_names_list)
+        cam_info = CameraInfo(
+            uid=uid,
+            R=R,
+            T=T,
+            FovY=FovY,
+            FovX=FovX,
+            depth_params=depth_params,
+            image_path=image_path,
+            image_name=image_name,
+            depth_path=depth_path,
+            width=width,
+            height=height,
+            is_test=image_name in test_cam_names_list)
         cam_infos.append(cam_info)
 
     sys.stdout.write('\n')
@@ -356,12 +352,13 @@ def readNerfSyntheticInfo(path,
     except Exception:
         pcd = None
 
-    scene_info = SceneInfo(point_cloud=pcd,
-                           train_cameras=train_cam_infos,
-                           test_cameras=test_cam_infos,
-                           nerf_normalization=nerf_normalization,
-                           ply_path=ply_path,
-                           is_nerf_synthetic=True)
+    scene_info = SceneInfo(
+        point_cloud=pcd,
+        train_cameras=train_cam_infos,
+        test_cameras=test_cam_infos,
+        nerf_normalization=nerf_normalization,
+        ply_path=ply_path,
+        is_nerf_synthetic=True)
     return scene_info
 
 
