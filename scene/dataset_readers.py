@@ -156,7 +156,12 @@ def storePly(path, xyz, rgb):
     ply_data.write(path)
 
 
-def readColmapSceneInfo(path, images, depths, eval, train_test_exp, llffhold=8):
+def read_colmap_scene_info(path: str,
+                           images: str,
+                           depths: str,
+                           eval: bool,
+                           train_test_exp: bool,
+                           llffhold: int = 8):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -199,7 +204,7 @@ def readColmapSceneInfo(path, images, depths, eval, train_test_exp, llffhold=8):
             cam_names = sorted(cam_names)
             test_cam_names_list = [name for idx, name in enumerate(cam_names) if idx % llffhold == 0]
         else:
-            with open(os.path.join(path, "sparse/0", "test.txt"), 'r') as file:
+            with open(os.path.join(path, "sparse/0", "test.txt"), "r") as file:
                 test_cam_names_list = [line.strip() for line in file]
     else:
         test_cam_names_list = []
@@ -249,7 +254,7 @@ def readCamerasFromTransforms(path,
                               depths_folder,
                               white_background,
                               is_test,
-                              extension=".png"):
+                              extension: str = ".png"):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -363,6 +368,6 @@ def readNerfSyntheticInfo(path,
 
 
 sceneLoadTypeCallbacks = {
-    "Colmap": readColmapSceneInfo,
+    "Colmap": read_colmap_scene_info,
     "Blender": readNerfSyntheticInfo
 }

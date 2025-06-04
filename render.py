@@ -11,7 +11,7 @@
 
 import logging
 import torch
-from scene import Scene
+from scene.scene import Scene
 import os
 from tqdm import tqdm
 from os import makedirs

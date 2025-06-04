@@ -20,7 +20,8 @@ def inverse_sigmoid(x):
     return torch.log(x / (1 - x))
 
 
-def PILtoTorch(pil_image, resolution):
+def PILtoTorch(pil_image,
+               resolution):
     resized_image_PIL = pil_image.resize(resolution)
     resized_image = torch.from_numpy(np.array(resized_image_PIL)) / 255.0
     if len(resized_image.shape) == 3:
@@ -29,9 +30,11 @@ def PILtoTorch(pil_image, resolution):
         return resized_image.unsqueeze(dim=-1).permute(2, 0, 1)
 
 
-def get_expon_lr_func(
-    lr_init, lr_final, lr_delay_steps=0, lr_delay_mult=1.0, max_steps=1000000
-):
+def get_expon_lr_func(lr_init: float,
+                      lr_final: float,
+                      lr_delay_steps: int = 0,
+                      lr_delay_mult: float = 1.0,
+                      max_steps: int = 1000000):
     """
     Copied from Plenoxels
 
@@ -86,7 +89,7 @@ def build_rotation(r):
 
     q = r / norm[:, None]
 
-    R = torch.zeros((q.size(0), 3, 3), device='cuda')
+    R = torch.zeros((q.size(0), 3, 3), device="cuda")
 
     r = q[:, 0]
     x = q[:, 1]
@@ -107,11 +110,12 @@ def build_rotation(r):
 
 def build_scaling_rotation(s, r):
     L = torch.zeros((s.shape[0], 3, 3), dtype=torch.float, device="cuda")
-    R = build_rotation(r)
 
     L[:, 0, 0] = s[:, 0]
     L[:, 1, 1] = s[:, 1]
     L[:, 2, 2] = s[:, 2]
+
+    R = build_rotation(r)
 
     L = R @ L
     return L

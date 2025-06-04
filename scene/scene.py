@@ -21,7 +21,6 @@ from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 
 
 class Scene:
-
     def __init__(self,
                  gaussians: GaussianModel,
                  args: GroupParams,

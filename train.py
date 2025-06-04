@@ -18,7 +18,7 @@ from random import randint
 from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui
 import sys
-from scene import Scene, GaussianModel
+from scene.scene import Scene, GaussianModel
 from utils.general_utils import get_expon_lr_func
 import uuid
 from tqdm import tqdm
@@ -97,7 +97,9 @@ def training(dataset: GroupParams,
     gaussians = GaussianModel(
         sh_degree=dataset.sh_degree,
         optimizer_type=opt.optimizer_type)
-    scene = Scene(gaussians=gaussians, args=dataset)
+    scene = Scene(
+        gaussians=gaussians,
+        args=dataset)
     gaussians.training_setup(opt)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
@@ -111,8 +113,8 @@ def training(dataset: GroupParams,
 
     use_sparse_adam = opt.optimizer_type == "sparse_adam" and SPARSE_ADAM_AVAILABLE
     depth_l1_weight = get_expon_lr_func(
-        opt.depth_l1_weight_init,
-        opt.depth_l1_weight_final,
+        lr_init=opt.depth_l1_weight_init,
+        lr_final=opt.depth_l1_weight_final,
         max_steps=opt.iterations)
 
     viewpoint_stack = scene.getTrainCameras().copy()

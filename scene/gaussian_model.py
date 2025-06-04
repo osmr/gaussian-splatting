@@ -21,7 +21,7 @@ from plyfile import PlyData, PlyElement
 from utils.sh_utils import RGB2SH
 from simple_knn._C import distCUDA2
 from utils.graphics_utils import BasicPointCloud
-from utils.general_utils import strip_symmetric, build_scaling_rotation
+from utils.general_utils import build_scaling_rotation, strip_symmetric
 
 try:
     from diff_gaussian_rasterization import SparseGaussianAdam
@@ -31,7 +31,7 @@ except Exception:
 
 class GaussianModel:
 
-    def setup_functions(self):
+    def _setup_activations(self):
         def build_covariance_from_scaling_rotation(scaling,
                                                    scaling_modifier,
                                                    rotation):
@@ -53,22 +53,26 @@ class GaussianModel:
     def __init__(self,
                  sh_degree: int,
                  optimizer_type: str = "default"):
+
         self.active_sh_degree = 0
-        self.optimizer_type = optimizer_type
         self.max_sh_degree = sh_degree
+        self.optimizer_type = optimizer_type
+
         self._xyz = torch.empty(0)
         self._features_dc = torch.empty(0)
         self._features_rest = torch.empty(0)
         self._scaling = torch.empty(0)
         self._rotation = torch.empty(0)
         self._opacity = torch.empty(0)
+
         self.max_radii2D = torch.empty(0)
         self.xyz_gradient_accum = torch.empty(0)
         self.denom = torch.empty(0)
         self.optimizer = None
         self.percent_dense = 0
         self.spatial_lr_scale = 0
-        self.setup_functions()
+
+        self._setup_activations()
 
     def capture(self):
         return (
@@ -445,7 +449,11 @@ class GaussianModel:
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
 
-    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
+    def densify_and_split(self,
+                          grads,
+                          grad_threshold,
+                          scene_extent,
+                          N=2):
         n_init_points = self.get_xyz.shape[0]
         # Extract points that satisfy the gradient condition
         padded_grad = torch.zeros((n_init_points), device="cuda")
@@ -478,7 +486,10 @@ class GaussianModel:
         prune_filter = torch.cat((selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
         self.prune_points(prune_filter)
 
-    def densify_and_clone(self, grads, grad_threshold, scene_extent):
+    def densify_and_clone(self,
+                          grads,
+                          grad_threshold,
+                          scene_extent):
         # Extract points that satisfy the gradient condition
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(selected_pts_mask,
@@ -503,11 +514,11 @@ class GaussianModel:
             new_tmp_radii)
 
     def densify_and_prune(self,
-                          max_grad,
-                          min_opacity,
-                          extent,
-                          max_screen_size,
-                          radii):
+                          max_grad: float,
+                          min_opacity: float,
+                          extent: float,
+                          max_screen_size: float | None,
+                          radii: torch.tensor):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
