@@ -150,13 +150,15 @@ class GaussianModel:
     def get_exposure(self):
         return self._exposure
 
-    def get_exposure_from_name(self, image_name):
+    def get_exposure_from_name(self,
+                               image_name: str):
         if self.pretrained_exposures is None:
             return self._exposure[self.exposure_mapping[image_name]]
         else:
             return self.pretrained_exposures[image_name]
 
-    def get_covariance(self, scaling_modifier=1):
+    def get_covariance(self,
+                       scaling_modifier=1):
         return self.covariance_activation(
             self.get_scaling,
             scaling_modifier,
@@ -206,12 +208,12 @@ class GaussianModel:
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
 
         l = [
-            {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-            {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
-            {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
-            {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-            {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-            {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+            {"params": [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+            {"params": [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
+            {"params": [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
+            {"params": [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+            {"params": [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+            {"params": [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
         ]
 
         if self.optimizer_type == "default":
@@ -386,7 +388,7 @@ class GaussianModel:
         return optimizable_tensors
 
     def prune_points(self,
-                     mask):
+                     mask: torch.tensor):
         valid_points_mask = ~mask
         optimizable_tensors = self._prune_optimizer(valid_points_mask)
 
@@ -470,8 +472,9 @@ class GaussianModel:
         padded_grad = torch.zeros((n_init_points), device="cuda")
         padded_grad[:grads.shape[0]] = grads.squeeze()
         selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
-        selected_pts_mask = torch.logical_and(selected_pts_mask,
-                                              torch.max(self.get_scaling, dim=1).values > self.percent_dense*scene_extent)
+        selected_pts_mask = torch.logical_and(
+            selected_pts_mask,
+            torch.max(self.get_scaling, dim=1).values > self.percent_dense*scene_extent)
 
         stds = self.get_scaling[selected_pts_mask].repeat(N, 1)
         means = torch.zeros((stds.size(0), 3), device="cuda")
@@ -486,15 +489,17 @@ class GaussianModel:
         new_tmp_radii = self.tmp_radii[selected_pts_mask].repeat(N)
 
         self.densification_postfix(
-            new_xyz,
-            new_features_dc,
-            new_features_rest,
-            new_opacity,
-            new_scaling,
-            new_rotation,
-            new_tmp_radii)
+            new_xyz=new_xyz,
+            new_features_dc=new_features_dc,
+            new_features_rest=new_features_rest,
+            new_opacities=new_opacity,
+            new_scaling=new_scaling,
+            new_rotation=new_rotation,
+            new_tmp_radii=new_tmp_radii)
 
-        prune_filter = torch.cat((selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
+        prune_filter = torch.cat((
+            selected_pts_mask,
+            torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
         self.prune_points(prune_filter)
 
     def densify_and_clone(self,
@@ -503,8 +508,9 @@ class GaussianModel:
                           scene_extent: float):
         # Extract points that satisfy the gradient condition
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
-        selected_pts_mask = torch.logical_and(selected_pts_mask,
-                                              torch.max(self.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
+        selected_pts_mask = torch.logical_and(
+            selected_pts_mask,
+            torch.max(self.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
 
         new_xyz = self._xyz[selected_pts_mask]
         new_features_dc = self._features_dc[selected_pts_mask]
@@ -516,13 +522,13 @@ class GaussianModel:
         new_tmp_radii = self.tmp_radii[selected_pts_mask]
 
         self.densification_postfix(
-            new_xyz,
-            new_features_dc,
-            new_features_rest,
-            new_opacities,
-            new_scaling,
-            new_rotation,
-            new_tmp_radii)
+            new_xyz=new_xyz,
+            new_features_dc=new_features_dc,
+            new_features_rest=new_features_rest,
+            new_opacities=new_opacities,
+            new_scaling=new_scaling,
+            new_rotation=new_rotation,
+            new_tmp_radii=new_tmp_radii)
 
     def densify_and_prune(self,
                           max_grad: float,
