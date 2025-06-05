@@ -12,17 +12,20 @@
 import torch
 import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
+from scene.camera import Camera
+
+from arguments import GroupParams
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 
-def render(viewpoint_camera,
+def render(viewpoint_camera: Camera,
            pc: GaussianModel,
-           pipe,
-           bg_color: torch.Tensor,
-           scaling_modifier=1.0,
-           separate_sh=False,
+           pipe: GroupParams,
+           bg_color: torch.tensor,
+           scaling_modifier: float = 1.0,
+           separate_sh: bool = False,
            override_color=None,
-           use_trained_exp=False):
+           use_trained_exp: bool = False):
     """
     Render the scene. 
     
@@ -37,14 +40,14 @@ def render(viewpoint_camera,
         pass
 
     # Set up rasterization configuration
-    tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
-    tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
+    tan_fov_x = math.tan(viewpoint_camera.FoVx * 0.5)
+    tan_fov_y = math.tan(viewpoint_camera.FoVy * 0.5)
 
     raster_settings = GaussianRasterizationSettings(
         image_height=int(viewpoint_camera.image_height),
         image_width=int(viewpoint_camera.image_width),
-        tanfovx=tanfovx,
-        tanfovy=tanfovy,
+        tanfovx=tan_fov_x,
+        tanfovy=tan_fov_y,
         bg=bg_color,
         scale_modifier=scaling_modifier,
         viewmatrix=viewpoint_camera.world_view_transform,

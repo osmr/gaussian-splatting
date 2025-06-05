@@ -151,7 +151,7 @@ def storePly(path, xyz, rgb):
     elements[:] = list(map(tuple, attributes))
 
     # Create the PlyData object and write to file
-    vertex_element = PlyElement.describe(elements, 'vertex')
+    vertex_element = PlyElement.describe(elements, "vertex")
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
@@ -249,12 +249,12 @@ def read_colmap_scene_info(path: str,
     return scene_info
 
 
-def readCamerasFromTransforms(path,
-                              transformsfile,
-                              depths_folder,
-                              white_background,
-                              is_test,
-                              extension: str = ".png"):
+def read_cameras_from_transforms(path,
+                                 transformsfile,
+                                 depths_folder,
+                                 white_background,
+                                 is_test,
+                                 extension: str = ".png"):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -310,15 +310,15 @@ def readCamerasFromTransforms(path,
     return cam_infos
 
 
-def readNerfSyntheticInfo(path,
-                          white_background,
-                          depths,
-                          eval,
-                          extension=".png"):
+def read_nerf_synthetic_info(path: str,
+                             white_background: bool,
+                             depths: str,
+                             eval: bool,
+                             extension: str = ".png"):
 
     depths_folder = os.path.join(path, depths) if depths != "" else ""
     logging.info("Reading Training Transforms")
-    train_cam_infos = readCamerasFromTransforms(
+    train_cam_infos = read_cameras_from_transforms(
         path,
         "transforms_train.json",
         depths_folder,
@@ -326,7 +326,7 @@ def readNerfSyntheticInfo(path,
         False,
         extension)
     logging.info("Reading Test Transforms")
-    test_cam_infos = readCamerasFromTransforms(
+    test_cam_infos = read_cameras_from_transforms(
         path,
         "transforms_test.json",
         depths_folder,
@@ -367,7 +367,7 @@ def readNerfSyntheticInfo(path,
     return scene_info
 
 
-sceneLoadTypeCallbacks = {
-    "Colmap": read_colmap_scene_info,
-    "Blender": readNerfSyntheticInfo
-}
+# sceneLoadTypeCallbacks = {
+#     "Colmap": read_colmap_scene_info,
+#     "Blender": read_nerf_synthetic_info
+# }

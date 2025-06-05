@@ -49,6 +49,7 @@ pip install tqdm
 pip install plyfile
 pip install opencv-python
 pip install tensorboard
+#pip install flake8, pylint, mypy
 ```
 
 

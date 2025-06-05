@@ -14,7 +14,7 @@ import random
 import json
 import logging
 from utils.system_utils import searchForMaxIteration
-from scene.dataset_readers import sceneLoadTypeCallbacks
+from scene.dataset_readers import read_colmap_scene_info, read_nerf_synthetic_info
 from scene.gaussian_model import GaussianModel
 from arguments import GroupParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
@@ -50,7 +50,7 @@ class Scene:
         self.test_cameras = {}
 
         if os.path.exists(os.path.join(args.source_path, "sparse")):
-            scene_info = sceneLoadTypeCallbacks["Colmap"](
+            scene_info = read_colmap_scene_info(
                 args.source_path,
                 args.images,
                 args.depths,
@@ -58,7 +58,7 @@ class Scene:
                 args.train_test_exp)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             logging.info("Found transforms_train.json file, assuming Blender data set!")
-            scene_info = sceneLoadTypeCallbacks["Blender"](
+            scene_info = read_nerf_synthetic_info(
                 args.source_path,
                 args.white_background,
                 args.depths,
@@ -110,7 +110,10 @@ class Scene:
                 "iteration_" + str(self.loaded_iter),
                 "point_cloud.ply"), args.train_test_exp)
         else:
-            self.gaussians.create_from_pcd(scene_info.point_cloud, scene_info.train_cameras, self.cameras_extent)
+            self.gaussians.create_from_pcd(
+                pcd=scene_info.point_cloud,
+                cam_infos=scene_info.train_cameras,
+                spatial_lr_scale=self.cameras_extent)
 
     def save(self, iteration):
         point_cloud_path = os.path.join(self.model_path, "point_cloud/iteration_{}".format(iteration))
