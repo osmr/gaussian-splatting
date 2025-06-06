@@ -18,6 +18,7 @@ from scene.dataset_readers import read_colmap_scene_info, read_nerf_synthetic_in
 from scene.gaussian_model import GaussianModel
 from arguments import GroupParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
+from scene.gaussian_model_serializer import GaussianModelSerializer
 
 
 class Scene:
@@ -104,11 +105,11 @@ class Scene:
                 True)
 
         if self.loaded_iter:
-            self.gaussians.load_ply(os.path.join(
-                self.model_path,
-                "point_cloud",
-                "iteration_" + str(self.loaded_iter),
-                "point_cloud.ply"), args.train_test_exp)
+            GaussianModelSerializer.load_ply(
+                model=self.gaussians,
+                path=os.path.join(self.model_path, "point_cloud", "iteration_" + str(self.loaded_iter),
+                                  "point_cloud.ply"),
+                use_train_test_exp=args.train_test_exp)
         else:
             self.gaussians.create_from_pcd(
                 pcd=scene_info.point_cloud,
@@ -117,7 +118,10 @@ class Scene:
 
     def save(self, iteration):
         point_cloud_path = os.path.join(self.model_path, "point_cloud/iteration_{}".format(iteration))
-        self.gaussians.save_ply(os.path.join(point_cloud_path, "point_cloud.ply"))
+        GaussianModelSerializer.save_ply(
+            model=self.gaussians,
+            path=os.path.join(point_cloud_path, "point_cloud.ply")
+        )
         exposure_dict = {
             image_name: self.gaussians.get_exposure_from_name(image_name).detach().cpu().numpy().tolist()
             for image_name in self.gaussians.exposure_mapping
