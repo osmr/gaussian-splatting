@@ -97,10 +97,10 @@ def training_report(tb_writer: Any | None,
         validation_configs = (
             {
                 "name": "test",
-                "cameras": scene.getTestCameras()},
+                "cameras": scene.get_test_cameras()},
             {
                 "name": "train",
-                "cameras": [scene.getTrainCameras()[idx % len(scene.getTrainCameras())] for idx in range(5, 30, 5)]
+                "cameras": [scene.get_train_cameras()[idx % len(scene.get_train_cameras())] for idx in range(5, 30, 5)]
             }
         )
 
@@ -186,7 +186,7 @@ def training(dataset: GroupParams,
         lr_final=opt.depth_l1_weight_final,
         max_steps=opt.iterations)
 
-    viewpoint_stack = scene.getTrainCameras().copy()
+    viewpoint_stack = scene.get_train_cameras().copy()
     viewpoint_indices = list(range(len(viewpoint_stack)))
     ema_loss_for_log = 0.0
     ema_Ll1depth_for_log = 0.0
@@ -234,7 +234,7 @@ def training(dataset: GroupParams,
 
         # Pick a random Camera
         if not viewpoint_stack:
-            viewpoint_stack = scene.getTrainCameras().copy()
+            viewpoint_stack = scene.get_train_cameras().copy()
             viewpoint_indices = list(range(len(viewpoint_stack)))
         rand_idx = randint(0, len(viewpoint_indices) - 1)
         viewpoint_cam = viewpoint_stack.pop(rand_idx)

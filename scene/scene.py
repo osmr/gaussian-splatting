@@ -68,7 +68,7 @@ class Scene:
             assert False, "Could not recognize scene type!"
 
         if not self.loaded_iter:
-            with (open(scene_info.ply_path, 'rb') as src_file,
+            with (open(scene_info.ply_path, "rb") as src_file,
                   open(os.path.join(self.model_path, "input.ply"), "wb") as dest_file):
                 dest_file.write(src_file.read())
             json_cams = []
@@ -91,24 +91,23 @@ class Scene:
         for resolution_scale in resolution_scales:
             logging.info("Loading Training Cameras")
             self.train_cameras[resolution_scale] = cameraList_from_camInfos(
-                scene_info.train_cameras,
-                resolution_scale,
-                args,
-                scene_info.is_nerf_synthetic,
-                False)
+                cam_infos=scene_info.train_cameras,
+                resolution_scale=resolution_scale,
+                args=args,
+                is_nerf_synthetic=scene_info.is_nerf_synthetic,
+                is_test_dataset=False)
             logging.info("Loading Test Cameras")
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(
-                scene_info.test_cameras,
-                resolution_scale,
-                args,
-                scene_info.is_nerf_synthetic,
-                True)
+                cam_infos=scene_info.test_cameras,
+                resolution_scale=resolution_scale,
+                args=args,
+                is_nerf_synthetic=scene_info.is_nerf_synthetic,
+                is_test_dataset=True)
 
         if self.loaded_iter:
             GaussianModelSerializer.load_ply(
                 model=self.gaussians,
-                path=os.path.join(self.model_path, "point_cloud", "iteration_" + str(self.loaded_iter),
-                                  "point_cloud.ply"),
+                path=self._get_point_cloud_ply_file_path(self.loaded_iter),
                 use_train_test_exp=args.train_test_exp)
         else:
             self.gaussians.create_from_pcd(
@@ -116,22 +115,28 @@ class Scene:
                 cam_infos=scene_info.train_cameras,
                 spatial_lr_scale=self.cameras_extent)
 
-    def save(self, iteration):
-        point_cloud_path = os.path.join(self.model_path, "point_cloud/iteration_{}".format(iteration))
+    def _get_point_cloud_ply_file_path(self,
+                                       iteration: int):
+        return os.path.join(self.model_path, "point_cloud", "iteration_{}".format(iteration), "point_cloud.ply")
+
+    def save(self,
+             iteration: int):
         GaussianModelSerializer.save_ply(
             model=self.gaussians,
-            path=os.path.join(point_cloud_path, "point_cloud.ply")
+            path=self._get_point_cloud_ply_file_path(iteration)
         )
+
         exposure_dict = {
             image_name: self.gaussians.get_exposure_from_name(image_name).detach().cpu().numpy().tolist()
             for image_name in self.gaussians.exposure_mapping
         }
-
         with open(os.path.join(self.model_path, "exposure.json"), "w") as f:
             json.dump(exposure_dict, f, indent=2)
 
-    def getTrainCameras(self, scale=1.0):
+    def get_train_cameras(self,
+                          scale: float = 1.0):
         return self.train_cameras[scale]
 
-    def getTestCameras(self, scale=1.0):
+    def get_test_cameras(self,
+                         scale: float = 1.0):
         return self.test_cameras[scale]

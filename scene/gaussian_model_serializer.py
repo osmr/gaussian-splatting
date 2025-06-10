@@ -12,17 +12,17 @@ class GaussianModelSerializer:
 
     @staticmethod
     def construct_list_of_attributes(model):
-        l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
+        l = ["x", "y", "z", "nx", "ny", "nz"]
         # All channels except the 3 DC
         for i in range(model._features_dc.shape[1] * model._features_dc.shape[2]):
-            l.append('f_dc_{}'.format(i))
+            l.append("f_dc_{}".format(i))
         for i in range(model._features_rest.shape[1] * model._features_rest.shape[2]):
-            l.append('f_rest_{}'.format(i))
-        l.append('opacity')
+            l.append("f_rest_{}".format(i))
+        l.append("opacity")
         for i in range(model._scaling.shape[1]):
-            l.append('scale_{}'.format(i))
+            l.append("scale_{}".format(i))
         for i in range(model._rotation.shape[1]):
-            l.append('rot_{}'.format(i))
+            l.append("rot_{}".format(i))
         return l
 
     @staticmethod
