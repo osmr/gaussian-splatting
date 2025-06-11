@@ -13,7 +13,7 @@ import logging
 import torch
 import numpy as np
 
-from arguments import GroupParams
+from arguments.param_group import GroupParams
 from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
 from torch import nn
 from utils.sh_utils import RGB2SH

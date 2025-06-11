@@ -25,7 +25,10 @@ import uuid
 from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser
-from arguments import GroupParams, ModelParams, PipelineParams, OptimizationParams
+from arguments.param_group import GroupParams, ParamGroup
+from arguments.model_params import ModelParams
+from arguments.pipline_params import PipelineParams
+from arguments.optimization_params import OptimizationParams
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
@@ -357,10 +360,26 @@ def training(dataset: GroupParams,
 
 if __name__ == "__main__":
     # Set up command line argument parser
+    lp = ModelParams()
+    op = OptimizationParams()
+    pp = PipelineParams()
+
     parser = ArgumentParser(description="Training script parameters")
-    lp = ModelParams(parser)
-    op = OptimizationParams(parser)
-    pp = PipelineParams(parser)
+    ParamGroup.export_to_args(
+        param_struct=lp,
+        parser=parser,
+        name="Loading Parameters",
+        fill_none=False)
+    ParamGroup.export_to_args(
+        param_struct=pp,
+        parser=parser,
+        name="Pipeline Parameters",
+        fill_none=False)
+    ParamGroup.export_to_args(
+        param_struct=op,
+        parser=parser,
+        name="Optimization Parameters",
+        fill_none=False)
     parser.add_argument('--ip', type=str, default="127.0.0.1")
     parser.add_argument('--port', type=int, default=6009)
     parser.add_argument('--debug_from', type=int, default=-1)
@@ -395,6 +414,18 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 
+    ParamGroup.import_from_args(
+        param_struct=lp,
+        args=args)
+    lp.source_path = os.path.abspath(lp.source_path)
+    ParamGroup.import_from_args(
+        param_struct=pp,
+        args=args)
+    ParamGroup.import_from_args(
+        param_struct=op,
+        args=args)
+
+
     args.seed = init_rand(seed=args.seed, forced=True, hard=True)
     root_dir_path = args.model_path
     logger, _ = initialize_logging(
@@ -415,9 +446,9 @@ if __name__ == "__main__":
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
     training(
-        dataset=lp.extract(args),
-        opt=op.extract(args),
-        pipe=pp.extract(args),
+        dataset=lp,
+        opt=op,
+        pipe=pp,
         testing_iterations=args.test_iterations,
         saving_iterations=args.save_iterations,
         checkpoint_iterations=args.checkpoint_iterations,

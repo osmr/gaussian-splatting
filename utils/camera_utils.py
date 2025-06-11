@@ -10,7 +10,7 @@
 """
 
 import logging
-from arguments import GroupParams
+from arguments.param_group import GroupParams
 from scene.camera import Camera
 import numpy as np
 from scene.dataset_readers import CameraInfo
@@ -50,7 +50,8 @@ def loadCam(args: GroupParams,
 
     orig_w, orig_h = image.size
     if args.resolution in [1, 2, 4, 8]:
-        resolution = round(orig_w/(resolution_scale * args.resolution)), round(orig_h/(resolution_scale * args.resolution))
+        resolution = (round(orig_w / (resolution_scale * args.resolution)),
+                      round(orig_h / (resolution_scale * args.resolution)))
     else:  # should be a type that converts to float
         if args.resolution == -1:
             if orig_w > 1600:
@@ -70,7 +71,7 @@ def loadCam(args: GroupParams,
         resolution = (int(orig_w / scale), int(orig_h / scale))
 
     return Camera(
-        resolution,
+        resolution=resolution,
         colmap_id=cam_info.uid,
         R=cam_info.R,
         T=cam_info.T,
@@ -95,7 +96,13 @@ def cameraList_from_camInfos(cam_infos: list[CameraInfo],
     camera_list = []
 
     for id, c in enumerate(cam_infos):
-        camera_list.append(loadCam(args, id, c, resolution_scale, is_nerf_synthetic, is_test_dataset))
+        camera_list.append(loadCam(
+            args=args,
+            id=id,
+            cam_info=c,
+            resolution_scale=resolution_scale,
+            is_nerf_synthetic=is_nerf_synthetic,
+            is_test_dataset=is_test_dataset))
 
     return camera_list
 

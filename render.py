@@ -19,7 +19,10 @@ from gaussian_renderer import render
 import torchvision
 from utils.general_utils import safe_state
 from argparse import ArgumentParser
-from arguments import ModelParams, PipelineParams, get_combined_args
+from arguments.param_group import ParamGroup
+from arguments.model_params import ModelParams
+from arguments.pipline_params import PipelineParams
+from arguments.utils import get_combined_args
 from gaussian_renderer import GaussianModel
 try:
     from diff_gaussian_rasterization import SparseGaussianAdam
@@ -46,7 +49,12 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))
 
-def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, separate_sh: bool):
+def render_sets(dataset: ModelParams,
+                iteration: int,
+                pipeline: PipelineParams,
+                skip_train: bool,
+                skip_test: bool,
+                separate_sh: bool):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(
@@ -66,17 +74,43 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
 
 if __name__ == "__main__":
     # Set up command line argument parser
+    model = ModelParams()
+    pipeline = PipelineParams()
+
     parser = ArgumentParser(description="Testing script parameters")
-    model = ModelParams(parser, sentinel=True)
-    pipeline = PipelineParams(parser)
+    ParamGroup.export_to_args(
+        param_struct=model,
+        parser=parser,
+        name="Loading Parameters",
+        fill_none=True)
+    ParamGroup.export_to_args(
+        param_struct=pipeline,
+        parser=parser,
+        name="Pipeline Parameters",
+        fill_none=False)
+
     parser.add_argument("--iteration", default=-1, type=int)
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     args = get_combined_args(parser)
+
+    ParamGroup.import_from_args(
+        param_struct=model,
+        args=args)
+    ParamGroup.import_from_args(
+        param_struct=pipeline,
+        args=args)
+
     logging.info("Rendering " + args.model_path)
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
-    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, SPARSE_ADAM_AVAILABLE)
+    render_sets(
+        dataset=model,
+        iteration=args.iteration,
+        pipeline=pipeline,
+        skip_train=args.skip_train,
+        skip_test=args.skip_test,
+        separate_sh=SPARSE_ADAM_AVAILABLE)

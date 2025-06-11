@@ -14,7 +14,7 @@ import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.camera import Camera
 
-from arguments import GroupParams
+from arguments.param_group import GroupParams
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 
