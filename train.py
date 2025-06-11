@@ -25,7 +25,7 @@ import uuid
 from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser
-from arguments.param_group import GroupParams, ParamGroup
+from arguments.group_param_parser import GroupParamParser
 from arguments.model_params import ModelParams
 from arguments.pipline_params import PipelineParams
 from arguments.optimization_params import OptimizationParams
@@ -87,7 +87,7 @@ def training_report(tb_writer: Any | None,
                     testing_iterations: list[int],
                     scene: Scene,
                     renderFunc: Callable[..., dict],
-                    renderArgs: GroupParams,
+                    renderArgs: tuple,
                     train_test_exp: bool):
     if tb_writer:
         tb_writer.add_scalar("train_loss_patches/l1_loss", Ll1.item(), iteration)
@@ -146,9 +146,9 @@ def training_report(tb_writer: Any | None,
         torch.cuda.empty_cache()
 
 
-def training(dataset: GroupParams,
-             opt: GroupParams,
-             pipe: GroupParams,
+def training(model_params: ModelParams,
+             pipe_params: PipelineParams,
+             opt_params: OptimizationParams,
              testing_iterations: list[int],
              saving_iterations: list[int],
              checkpoint_iterations: list[int],
@@ -156,47 +156,47 @@ def training(dataset: GroupParams,
              debug_from: int,
              use_tb: bool):
 
-    if not SPARSE_ADAM_AVAILABLE and opt.optimizer_type == "sparse_adam":
+    if not SPARSE_ADAM_AVAILABLE and opt_params.optimizer_type == "sparse_adam":
         sys.exit("Trying to use sparse adam but it is not installed, please install the correct rasterizer using pip install [3dgs_accel].")
 
     first_iter = 0
 
-    dataset.model_path = prepare_output_dir(model_path=dataset.model_path)
+    model_params.model_path = prepare_output_dir(model_path=model_params.model_path)
     tb_writer = prepare_tb_logger(
-        model_path=dataset.model_path,
+        model_path=model_params.model_path,
         use_tb=use_tb)
 
     gaussians = GaussianModel(
-        sh_degree=dataset.sh_degree,
-        optimizer_type=opt.optimizer_type)
+        sh_degree=model_params.sh_degree,
+        optimizer_type=opt_params.optimizer_type)
     scene = Scene(
         gaussians=gaussians,
-        args=dataset)
-    gaussians.training_setup(opt)
+        model_params=model_params)
+    gaussians.training_setup(opt_params=opt_params)
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
-        gaussians.restore(model_params, opt)
+        gaussians.restore(model_params, opt_params)
 
-    bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
+    bg_color = [1, 1, 1] if model_params.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
     iter_start = torch.cuda.Event(enable_timing=True)
     iter_end = torch.cuda.Event(enable_timing=True)
 
-    use_sparse_adam = opt.optimizer_type == "sparse_adam" and SPARSE_ADAM_AVAILABLE
+    use_sparse_adam = opt_params.optimizer_type == "sparse_adam" and SPARSE_ADAM_AVAILABLE
     depth_l1_weight = get_expon_lr_func(
-        lr_init=opt.depth_l1_weight_init,
-        lr_final=opt.depth_l1_weight_final,
-        max_steps=opt.iterations)
+        lr_init=opt_params.depth_l1_weight_init,
+        lr_final=opt_params.depth_l1_weight_final,
+        max_steps=opt_params.iterations)
 
     viewpoint_stack = scene.get_train_cameras().copy()
     viewpoint_indices = list(range(len(viewpoint_stack)))
     ema_loss_for_log = 0.0
     ema_Ll1depth_for_log = 0.0
 
-    progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
+    progress_bar = tqdm(range(first_iter, opt_params.iterations), desc="Training progress")
     first_iter += 1
-    for iteration in range(first_iter, opt.iterations + 1):
+    for iteration in range(first_iter, opt_params.iterations + 1):
         if network_gui.conn is None:
             network_gui.try_connect()
         while network_gui.conn is not None:
@@ -205,24 +205,24 @@ def training(dataset: GroupParams,
                 (
                     custom_cam,
                     do_training,
-                    pipe.convert_SHs_python,
-                    pipe.compute_cov3D_python,
+                    pipe_params.convert_sh_python,
+                    pipe_params.compute_cov3d_python,
                     keep_alive,
                     scaling_modifer
                 ) = network_gui.receive()
                 if custom_cam is not None:
                     net_image = render(
-                        custom_cam,
-                        gaussians,
-                        pipe,
-                        background,
+                        viewpoint_camera=custom_cam,
+                        pc=gaussians,
+                        pipe=pipe_params,
+                        bg_color=background,
                         scaling_modifier=scaling_modifer,
-                        use_trained_exp=dataset.train_test_exp,
+                        use_trained_exp=model_params.train_test_exp,
                         separate_sh=SPARSE_ADAM_AVAILABLE)["render"]
                     net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(
                         1, 2, 0).contiguous().cpu().numpy())
-                network_gui.send(net_image_bytes, dataset.source_path)
-                if do_training and ((iteration < int(opt.iterations)) or not keep_alive):
+                network_gui.send(net_image_bytes, model_params.source_path)
+                if do_training and ((iteration < int(opt_params.iterations)) or not keep_alive):
                     break
             except Exception:
                 network_gui.conn = None
@@ -245,17 +245,17 @@ def training(dataset: GroupParams,
 
         # Render
         if (iteration - 1) == debug_from:
-            pipe.debug = True
+            pipe_params.debug = True
 
-        bg = torch.rand(3, device="cuda") if opt.random_background else background
+        bg = torch.rand(3, device="cuda") if opt_params.random_background else background
 
         render_pkg = render(
             viewpoint_camera=viewpoint_cam,
             pc=gaussians,
-            pipe=pipe,
+            pipe=pipe_params,
             bg_color=bg,
             separate_sh=SPARSE_ADAM_AVAILABLE,
-            use_trained_exp=dataset.train_test_exp)
+            use_trained_exp=model_params.train_test_exp)
         image = render_pkg["render"]
         viewspace_point_tensor = render_pkg["viewspace_points"]
         visibility_filter = render_pkg["visibility_filter"]
@@ -273,7 +273,7 @@ def training(dataset: GroupParams,
         else:
             ssim_value = ssim(image, gt_image)
 
-        loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim_value)
+        loss = (1.0 - opt_params.lambda_dssim) * Ll1 + opt_params.lambda_dssim * (1.0 - ssim_value)
 
         # Depth regularization
         Ll1depth_pure = 0.0
@@ -301,48 +301,48 @@ def training(dataset: GroupParams,
             if iteration % 10 == 0:
                 progress_bar.set_postfix({"Loss": f"{ema_loss_for_log:.{7}f}", "Depth Loss": f"{ema_Ll1depth_for_log:.{7}f}"})
                 progress_bar.update(10)
-            if iteration == opt.iterations:
+            if iteration == opt_params.iterations:
                 progress_bar.close()
 
             # Log and save
             training_report(
-                tb_writer,
-                iteration,
-                Ll1,
-                loss,
-                l1_loss,
-                iter_start.elapsed_time(iter_end),
-                testing_iterations,
-                scene,
-                render,
-                (pipe, background, 1., SPARSE_ADAM_AVAILABLE, None, dataset.train_test_exp),
-                dataset.train_test_exp)
+                tb_writer=tb_writer,
+                iteration=iteration,
+                Ll1=Ll1,
+                loss=loss,
+                l1_loss=l1_loss,
+                elapsed=iter_start.elapsed_time(iter_end),
+                testing_iterations=testing_iterations,
+                scene=scene,
+                renderFunc=render,
+                renderArgs=(pipe_params, background, 1., SPARSE_ADAM_AVAILABLE, None, model_params.train_test_exp),
+                train_test_exp=model_params.train_test_exp)
             if (iteration in saving_iterations):
                 logging.info("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
 
             # Densification
-            if iteration < opt.densify_until_iter:
+            if iteration < opt_params.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
                 gaussians.max_radii2D[visibility_filter] = torch.max(
                     gaussians.max_radii2D[visibility_filter],
                     radii[visibility_filter])
                 gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
-                    size_threshold = 20 if iteration > opt.opacity_reset_interval else None
+                if iteration > opt_params.densify_from_iter and iteration % opt_params.densification_interval == 0:
+                    size_threshold = 20 if iteration > opt_params.opacity_reset_interval else None
                     gaussians.densify_and_prune(
-                        opt.densify_grad_threshold,
+                        opt_params.densify_grad_threshold,
                         0.005,
                         scene.cameras_extent,
                         size_threshold,
                         radii)
 
-                if (iteration % opt.opacity_reset_interval == 0) or (dataset.white_background and iteration == opt.densify_from_iter):
+                if (iteration % opt_params.opacity_reset_interval == 0) or (model_params.white_background and iteration == opt_params.densify_from_iter):
                     gaussians.reset_opacity()
 
             # Optimizer step
-            if iteration < opt.iterations:
+            if iteration < opt_params.iterations:
                 gaussians.exposure_optimizer.step()
                 gaussians.exposure_optimizer.zero_grad(set_to_none=True)
                 if use_sparse_adam:
@@ -360,23 +360,23 @@ def training(dataset: GroupParams,
 
 if __name__ == "__main__":
     # Set up command line argument parser
-    lp = ModelParams()
-    op = OptimizationParams()
-    pp = PipelineParams()
+    model_params = ModelParams()
+    pipe_params = PipelineParams()
+    opt_params = OptimizationParams()
 
     parser = ArgumentParser(description="Training script parameters")
-    ParamGroup.export_to_args(
-        param_struct=lp,
+    GroupParamParser.export_to_args(
+        param_struct=model_params,
         parser=parser,
-        name="Loading Parameters",
+        name="Model/Dataset Parameters",
         fill_none=False)
-    ParamGroup.export_to_args(
-        param_struct=pp,
+    GroupParamParser.export_to_args(
+        param_struct=pipe_params,
         parser=parser,
         name="Pipeline Parameters",
         fill_none=False)
-    ParamGroup.export_to_args(
-        param_struct=op,
+    GroupParamParser.export_to_args(
+        param_struct=opt_params,
         parser=parser,
         name="Optimization Parameters",
         fill_none=False)
@@ -414,15 +414,15 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 
-    ParamGroup.import_from_args(
-        param_struct=lp,
+    GroupParamParser.import_from_args(
+        param_struct=model_params,
         args=args)
-    lp.source_path = os.path.abspath(lp.source_path)
-    ParamGroup.import_from_args(
-        param_struct=pp,
+    model_params.source_path = os.path.abspath(model_params.source_path)
+    GroupParamParser.import_from_args(
+        param_struct=pipe_params,
         args=args)
-    ParamGroup.import_from_args(
-        param_struct=op,
+    GroupParamParser.import_from_args(
+        param_struct=opt_params,
         args=args)
 
 
@@ -446,9 +446,9 @@ if __name__ == "__main__":
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
     training(
-        dataset=lp,
-        opt=op,
-        pipe=pp,
+        model_params=model_params,
+        pipe_params=pipe_params,
+        opt_params=opt_params,
         testing_iterations=args.test_iterations,
         saving_iterations=args.save_iterations,
         checkpoint_iterations=args.checkpoint_iterations,

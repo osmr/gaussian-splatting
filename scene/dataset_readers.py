@@ -129,14 +129,16 @@ def readColmapCameras(cam_extrinsics,
 
 def fetchPly(path):
     plydata = PlyData.read(path)
-    vertices = plydata['vertex']
-    positions = np.vstack([vertices['x'], vertices['y'], vertices['z']]).T
-    colors = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T / 255.0
-    normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
+    vertices = plydata["vertex"]
+    positions = np.vstack([vertices["x"], vertices["y"], vertices["z"]]).T
+    colors = np.vstack([vertices["red"], vertices["green"], vertices["blue"]]).T / 255.0
+    normals = np.vstack([vertices["nx"], vertices["ny"], vertices["nz"]]).T
     return BasicPointCloud(points=positions, colors=colors, normals=normals)
 
 
-def storePly(path, xyz, rgb):
+def storePly(path,
+             xyz,
+             rgb):
     # Define the dtype for the structured array
     dtype = [
         ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
@@ -319,20 +321,20 @@ def read_nerf_synthetic_info(path: str,
     depths_folder = os.path.join(path, depths) if depths != "" else ""
     logging.info("Reading Training Transforms")
     train_cam_infos = read_cameras_from_transforms(
-        path,
-        "transforms_train.json",
-        depths_folder,
-        white_background,
-        False,
-        extension)
+        path=path,
+        transformsfile="transforms_train.json",
+        depths_folder=depths_folder,
+        white_background=white_background,
+        is_test=False,
+        extension=extension)
     logging.info("Reading Test Transforms")
     test_cam_infos = read_cameras_from_transforms(
-        path,
-        "transforms_test.json",
-        depths_folder,
-        white_background,
-        True,
-        extension)
+        path=path,
+        transformsfile="transforms_test.json",
+        depths_folder=depths_folder,
+        white_background=white_background,
+        is_test=True,
+        extension=extension)
 
     if not eval:
         train_cam_infos.extend(test_cam_infos)
@@ -365,9 +367,3 @@ def read_nerf_synthetic_info(path: str,
         ply_path=ply_path,
         is_nerf_synthetic=True)
     return scene_info
-
-
-# sceneLoadTypeCallbacks = {
-#     "Colmap": read_colmap_scene_info,
-#     "Blender": read_nerf_synthetic_info
-# }

@@ -19,7 +19,7 @@ from gaussian_renderer import render
 import torchvision
 from utils.general_utils import safe_state
 from argparse import ArgumentParser
-from arguments.param_group import ParamGroup
+from arguments.group_param_parser import GroupParamParser
 from arguments.model_params import ModelParams
 from arguments.pipline_params import PipelineParams
 from arguments.utils import get_combined_args
@@ -59,7 +59,7 @@ def render_sets(dataset: ModelParams,
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(
             gaussians=gaussians,
-            args=dataset,
+            model_params=dataset,
             load_iteration=iteration,
             shuffle=False)
 
@@ -78,12 +78,12 @@ if __name__ == "__main__":
     pipeline = PipelineParams()
 
     parser = ArgumentParser(description="Testing script parameters")
-    ParamGroup.export_to_args(
+    GroupParamParser.export_to_args(
         param_struct=model,
         parser=parser,
         name="Loading Parameters",
         fill_none=True)
-    ParamGroup.export_to_args(
+    GroupParamParser.export_to_args(
         param_struct=pipeline,
         parser=parser,
         name="Pipeline Parameters",
@@ -95,10 +95,10 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", action="store_true")
     args = get_combined_args(parser)
 
-    ParamGroup.import_from_args(
+    GroupParamParser.import_from_args(
         param_struct=model,
         args=args)
-    ParamGroup.import_from_args(
+    GroupParamParser.import_from_args(
         param_struct=pipeline,
         args=args)
 

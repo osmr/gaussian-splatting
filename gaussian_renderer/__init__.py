@@ -14,13 +14,13 @@ import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.camera import Camera
 
-from arguments.param_group import GroupParams
+from arguments.pipline_params import PipelineParams
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 
 def render(viewpoint_camera: Camera,
            pc: GaussianModel,
-           pipe: GroupParams,
+           pipe: PipelineParams,
            bg_color: torch.tensor,
            scaling_modifier: float = 1.0,
            separate_sh: bool = False,
@@ -71,7 +71,7 @@ def render(viewpoint_camera: Camera,
     rotations = None
     cov3D_precomp = None
 
-    if pipe.compute_cov3D_python:
+    if pipe.compute_cov3d_python:
         cov3D_precomp = pc.get_covariance(scaling_modifier)
     else:
         scales = pc.get_scaling
@@ -82,7 +82,7 @@ def render(viewpoint_camera: Camera,
     shs = None
     colors_precomp = None
     if override_color is None:
-        if pipe.convert_SHs_python:
+        if pipe.convert_sh_python:
             shs_view = pc.get_features.transpose(1, 2).view(-1, 3, (pc.max_sh_degree+1)**2)
             dir_pp = (pc.get_xyz - viewpoint_camera.camera_center.repeat(pc.get_features.shape[0], 1))
             dir_pp_normalized = dir_pp/dir_pp.norm(dim=1, keepdim=True)

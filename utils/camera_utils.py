@@ -10,9 +10,9 @@
 """
 
 import logging
-from arguments.param_group import GroupParams
 from scene.camera import Camera
 import numpy as np
+from arguments.model_params import ModelParams
 from scene.dataset_readers import CameraInfo
 from utils.graphics_utils import fov2focal
 from PIL import Image
@@ -21,7 +21,7 @@ import cv2
 WARNED = False
 
 
-def loadCam(args: GroupParams,
+def loadCam(args: ModelParams,
             id: int,
             cam_info: CameraInfo,
             resolution_scale: float,
@@ -32,9 +32,9 @@ def loadCam(args: GroupParams,
     if cam_info.depth_path != "":
         try:
             if is_nerf_synthetic:
-                invdepthmap = cv2.imread(cam_info.depth_path, -1).astype(np.float32) / 512
+                inv_depth_map = cv2.imread(cam_info.depth_path, -1).astype(np.float32) / 512
             else:
-                invdepthmap = cv2.imread(cam_info.depth_path, -1).astype(np.float32) / float(2**16)
+                inv_depth_map = cv2.imread(cam_info.depth_path, -1).astype(np.float32) / float(2**16)
 
         except FileNotFoundError:
             logging.info(f"Error: The depth file at path '{cam_info.depth_path}' was not found.")
@@ -46,7 +46,7 @@ def loadCam(args: GroupParams,
             logging.info(f"An unexpected error occurred when trying to read depth at {cam_info.depth_path}: {e}")
             raise
     else:
-        invdepthmap = None
+        inv_depth_map = None
 
     orig_w, orig_h = image.size
     if args.resolution in [1, 2, 4, 8]:
@@ -79,7 +79,7 @@ def loadCam(args: GroupParams,
         FoVy=cam_info.FovY,
         depth_params=cam_info.depth_params,
         image=image,
-        invdepthmap=invdepthmap,
+        inv_depth_map=inv_depth_map,
         image_name=cam_info.image_name,
         uid=id,
         data_device=args.data_device,
@@ -90,14 +90,14 @@ def loadCam(args: GroupParams,
 
 def cameraList_from_camInfos(cam_infos: list[CameraInfo],
                              resolution_scale: float,
-                             args: GroupParams,
+                             model_params: ModelParams,
                              is_nerf_synthetic: bool,
                              is_test_dataset: bool):
     camera_list = []
 
     for id, c in enumerate(cam_infos):
         camera_list.append(loadCam(
-            args=args,
+            args=model_params,
             id=id,
             cam_info=c,
             resolution_scale=resolution_scale,

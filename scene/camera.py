@@ -2,6 +2,7 @@ import logging
 import torch
 from torch import nn
 import numpy as np
+from PIL import Image
 from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 from utils.general_utils import PILtoTorch
 import cv2
@@ -9,22 +10,22 @@ import cv2
 
 class Camera(nn.Module):
     def __init__(self,
-                 resolution,
-                 colmap_id,
-                 R,
-                 T,
-                 FoVx,
-                 FoVy,
-                 depth_params,
-                 image,
-                 invdepthmap,
-                 image_name,
-                 uid,
-                 trans=np.array([0.0, 0.0, 0.0]),
-                 scale=1.0,
-                 data_device="cuda",
-                 train_test_exp=False,
-                 is_test_dataset=False,
+                 resolution: tuple[int, int],
+                 colmap_id: int,
+                 R: np.ndarray,
+                 T: np.ndarray,
+                 FoVx: float,
+                 FoVy: float,
+                 depth_params: dict | None,
+                 image: Image,
+                 inv_depth_map: np.ndarray | None,
+                 image_name: str,
+                 uid: int,
+                 trans: np.ndarray = np.array([0.0, 0.0, 0.0]),
+                 scale: float = 1.0,
+                 data_device: str = "cuda",
+                 train_test_exp: bool = False,
+                 is_test_dataset: bool = False,
                  is_test_view: bool = False):
         super(Camera, self).__init__()
 
@@ -63,9 +64,9 @@ class Camera(nn.Module):
 
         self.invdepthmap = None
         self.depth_reliable = False
-        if invdepthmap is not None:
+        if inv_depth_map is not None:
             self.depth_mask = torch.ones_like(self.alpha_mask)
-            self.invdepthmap = cv2.resize(invdepthmap, resolution)
+            self.invdepthmap = cv2.resize(inv_depth_map, resolution)
             self.invdepthmap[self.invdepthmap < 0] = 0
             self.depth_reliable = True
 

@@ -4,11 +4,11 @@ import numpy as np
 
 class CameraInfo(NamedTuple):
     uid: int
-    R: np.array
-    T: np.array
-    FovY: np.array
-    FovX: np.array
-    depth_params: dict
+    R: np.ndarray
+    T: np.ndarray
+    FovY: np.ndarray
+    FovX: np.ndarray
+    depth_params: dict | None
     image_path: str
     image_name: str
     depth_path: str

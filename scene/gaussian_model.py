@@ -13,7 +13,7 @@ import logging
 import torch
 import numpy as np
 
-from arguments.param_group import GroupParams
+from arguments.optimization_params import OptimizationParams
 from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
 from torch import nn
 from utils.sh_utils import RGB2SH
@@ -198,18 +198,18 @@ class GaussianModel:
         self._exposure = nn.Parameter(exposure.requires_grad_(True))
 
     def training_setup(self,
-                       training_args: GroupParams):
-        self.percent_dense = training_args.percent_dense
+                       opt_params: OptimizationParams):
+        self.percent_dense = opt_params.percent_dense
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
 
         l = [
-            {"params": [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-            {"params": [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
-            {"params": [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
-            {"params": [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-            {"params": [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-            {"params": [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+            {"params": [self._xyz], 'lr': opt_params.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+            {"params": [self._features_dc], 'lr': opt_params.feature_lr, "name": "f_dc"},
+            {"params": [self._features_rest], 'lr': opt_params.feature_lr / 20.0, "name": "f_rest"},
+            {"params": [self._opacity], 'lr': opt_params.opacity_lr, "name": "opacity"},
+            {"params": [self._scaling], 'lr': opt_params.scaling_lr, "name": "scaling"},
+            {"params": [self._rotation], 'lr': opt_params.rotation_lr, "name": "rotation"}
         ]
 
         if self.optimizer_type == "default":
@@ -224,17 +224,17 @@ class GaussianModel:
         self.exposure_optimizer = torch.optim.Adam([self._exposure])
 
         self.xyz_scheduler_args = get_expon_lr_func(
-            lr_init=training_args.position_lr_init*self.spatial_lr_scale,
-            lr_final=training_args.position_lr_final*self.spatial_lr_scale,
-            lr_delay_mult=training_args.position_lr_delay_mult,
-            max_steps=training_args.position_lr_max_steps)
+            lr_init=opt_params.position_lr_init * self.spatial_lr_scale,
+            lr_final=opt_params.position_lr_final * self.spatial_lr_scale,
+            lr_delay_mult=opt_params.position_lr_delay_mult,
+            max_steps=opt_params.position_lr_max_steps)
 
         self.exposure_scheduler_args = get_expon_lr_func(
-            training_args.exposure_lr_init,
-            training_args.exposure_lr_final,
-            lr_delay_steps=training_args.exposure_lr_delay_steps,
-            lr_delay_mult=training_args.exposure_lr_delay_mult,
-            max_steps=training_args.iterations)
+            opt_params.exposure_lr_init,
+            opt_params.exposure_lr_final,
+            lr_delay_steps=opt_params.exposure_lr_delay_steps,
+            lr_delay_mult=opt_params.exposure_lr_delay_mult,
+            max_steps=opt_params.iterations)
 
     def update_learning_rate(self,
                              iteration: int):

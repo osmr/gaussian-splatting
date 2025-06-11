@@ -16,7 +16,7 @@ import logging
 from utils.system_utils import searchForMaxIteration
 from scene.dataset_readers import read_colmap_scene_info, read_nerf_synthetic_info
 from scene.gaussian_model import GaussianModel
-from arguments.param_group import GroupParams
+from arguments.model_params import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 from scene.gaussian_model_serializer import GaussianModelSerializer
 
@@ -24,20 +24,12 @@ from scene.gaussian_model_serializer import GaussianModelSerializer
 class Scene:
     def __init__(self,
                  gaussians: GaussianModel,
-                 args: GroupParams,
+                 model_params: ModelParams,
                  load_iteration: int | None = None,
                  shuffle: bool = True,
                  resolution_scales: list[float] = [1.0]):
-        assert (hasattr(args, "model_path"))
-        assert (hasattr(args, "source_path"))
-        assert (hasattr(args, "images"))
-        assert (hasattr(args, "depths"))
-        assert (hasattr(args, "eval"))
-        assert (hasattr(args, "train_test_exp"))
-        assert (hasattr(args, "white_background"))
-
         self.gaussians = gaussians
-        self.model_path = args.model_path
+        self.model_path = model_params.model_path
         self.loaded_iter = None
 
         if load_iteration:
@@ -50,20 +42,20 @@ class Scene:
         self.train_cameras = {}
         self.test_cameras = {}
 
-        if os.path.exists(os.path.join(args.source_path, "sparse")):
+        if os.path.exists(os.path.join(model_params.source_path, "sparse")):
             scene_info = read_colmap_scene_info(
-                args.source_path,
-                args.images,
-                args.depths,
-                args.eval,
-                args.train_test_exp)
-        elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
+                path=model_params.source_path,
+                images=model_params.images,
+                depths=model_params.depths,
+                eval=model_params.eval,
+                train_test_exp=model_params.train_test_exp)
+        elif os.path.exists(os.path.join(model_params.source_path, "transforms_train.json")):
             logging.info("Found transforms_train.json file, assuming Blender data set!")
             scene_info = read_nerf_synthetic_info(
-                args.source_path,
-                args.white_background,
-                args.depths,
-                args.eval)
+                path=model_params.source_path,
+                white_background=model_params.white_background,
+                depths=model_params.depths,
+                eval=model_params.eval)
         else:
             assert False, "Could not recognize scene type!"
 
@@ -93,14 +85,14 @@ class Scene:
             self.train_cameras[resolution_scale] = cameraList_from_camInfos(
                 cam_infos=scene_info.train_cameras,
                 resolution_scale=resolution_scale,
-                args=args,
+                model_params=model_params,
                 is_nerf_synthetic=scene_info.is_nerf_synthetic,
                 is_test_dataset=False)
             logging.info("Loading Test Cameras")
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(
                 cam_infos=scene_info.test_cameras,
                 resolution_scale=resolution_scale,
-                args=args,
+                model_params=model_params,
                 is_nerf_synthetic=scene_info.is_nerf_synthetic,
                 is_test_dataset=True)
 
@@ -108,7 +100,7 @@ class Scene:
             GaussianModelSerializer.load_ply(
                 model=self.gaussians,
                 path=self._get_point_cloud_ply_file_path(self.loaded_iter),
-                use_train_test_exp=args.train_test_exp)
+                use_train_test_exp=model_params.train_test_exp)
         else:
             self.gaussians.create_from_pcd(
                 pcd=scene_info.point_cloud,
