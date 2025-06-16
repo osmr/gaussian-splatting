@@ -14,7 +14,8 @@ import sys
 import logging
 from PIL import Image
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
-    read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
+    read_extrinsics_binary, read_intrinsics_binary
+from scene.colmap_point_cloud_serializer import ColmapPointCloudSerializer
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
@@ -202,16 +203,16 @@ def extract_scene_info_from_colmap(data_dir_path: str,
     if not os.path.exists(pcd_ply_file_path):
         logging.info("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
-            xyz, rgb, _ = read_points3D_binary(pcd_bin_file_path)
+            # xyz, rgb, _ = read_points3D_binary(pcd_bin_file_path)
+            cm_pcd = ColmapPointCloudSerializer.load_from_bin(bin_file_path=pcd_bin_file_path)
         except Exception:
-            xyz, rgb, _ = read_points3D_text(pcd_txt_file_path)
-
-        # store_ply(pcd_ply_file_path, xyz, rgb)
+            # xyz, rgb, _ = read_points3D_text(pcd_txt_file_path)
+            cm_pcd = ColmapPointCloudSerializer.load_from_txt(txt_file_path=pcd_txt_file_path)
 
         BasicPointCloudSerializer.save_to_ply(
             data=BasicPointCloud(
-                points=xyz,
-                colors=(rgb / 255.0)),
+                points=cm_pcd.points,
+                colors=(cm_pcd.colors / 255.0)),
             ply_file_path=pcd_ply_file_path)
     try:
         pcd = BasicPointCloudSerializer.load_from_ply(ply_file_path=pcd_ply_file_path)
@@ -319,8 +320,8 @@ def read_nerf_synthetic_info(path: str,
 
     nerf_normalization = get_nerf_pp_norm(train_cam_infos)
 
-    ply_path = os.path.join(path, "points3d.ply")
-    if not os.path.exists(ply_path):
+    pcd_ply_file_path = os.path.join(path, "points3d.ply")
+    if not os.path.exists(pcd_ply_file_path):
         # Since this data set has no colmap data, we start with random points
         num_pts = 100_000
         logging.info(f"Generating random point cloud ({num_pts})...")
@@ -329,16 +330,13 @@ def read_nerf_synthetic_info(path: str,
         xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
         shs = np.random.random((num_pts, 3)) / 255.0
 
-        # pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
-        # store_ply(ply_path, xyz, SH2RGB(shs) * 255)
-
         BasicPointCloudSerializer.save_to_ply(
             data=BasicPointCloud(
                 points=xyz,
                 colors=SH2RGB(shs)),
-            ply_file_path=ply_path)
+            ply_file_path=pcd_ply_file_path)
     try:
-        pcd = BasicPointCloudSerializer.load_from_ply(ply_file_path=ply_path)
+        pcd = BasicPointCloudSerializer.load_from_ply(ply_file_path=pcd_ply_file_path)
     except Exception:
         pcd = None
 
@@ -347,6 +345,6 @@ def read_nerf_synthetic_info(path: str,
         train_cameras=train_cam_infos,
         test_cameras=test_cam_infos,
         nerf_normalization=nerf_normalization,
-        ply_path=ply_path,
+        ply_path=pcd_ply_file_path,
         is_nerf_synthetic=True)
     return scene_info

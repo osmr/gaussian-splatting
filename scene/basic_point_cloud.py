@@ -9,6 +9,7 @@ class BasicPointCloud:
         super(BasicPointCloud, self).__init__()
         assert (points.shape == colors.shape)
         assert (normals is None) or (normals.shape == points.shape)
+        assert (points.shape[1] == 3)
         assert (colors.min().item() >= 0.0)
         assert (colors.max().item() <= 1.0)
 
