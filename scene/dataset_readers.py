@@ -21,13 +21,13 @@ import json
 from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
-from scene.gaussian_model import BasicPointCloud
+from scene.basic_point_cloud import BasicPointCloud
 from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
 
 
-def getNerfppNorm(cam_info):
+def get_nerf_pp_norm(cam_infos: list[CameraInfo]) -> dict:
     def get_center_and_diag(cam_centers):
         cam_centers = np.hstack(cam_centers)
         avg_cam_center = np.mean(cam_centers, axis=1, keepdims=True)
@@ -38,7 +38,7 @@ def getNerfppNorm(cam_info):
 
     cam_centers = []
 
-    for cam in cam_info:
+    for cam in cam_infos:
         W2C = getWorld2View2(cam.R, cam.T)
         C2W = np.linalg.inv(W2C)
         cam_centers.append(C2W[:3, 3:4])
@@ -119,23 +119,23 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
     return cam_infos
 
 
-def fetchPly(path):
-    plydata = PlyData.read(path)
-    vertices = plydata["vertex"]
+def read_basic_point_cloud_from_ply(ply_file_path) -> BasicPointCloud:
+    ply_data = PlyData.read(ply_file_path)
+    vertices = ply_data["vertex"]
     positions = np.vstack([vertices["x"], vertices["y"], vertices["z"]]).T
     colors = np.vstack([vertices["red"], vertices["green"], vertices["blue"]]).T / 255.0
     normals = np.vstack([vertices["nx"], vertices["ny"], vertices["nz"]]).T
     return BasicPointCloud(points=positions, colors=colors, normals=normals)
 
 
-def storePly(path,
-             xyz,
-             rgb):
+def store_ply(path,
+              xyz,
+              rgb):
     # Define the dtype for the structured array
     dtype = [
-        ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
-        ('nx', 'f4'), ('ny', 'f4'), ('nz', 'f4'),
-        ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')
+        ("x", "f4"), ("y", "f4"), ("z", "f4"),
+        ("nx", "f4"), ("ny", "f4"), ("nz", "f4"),
+        ("red", "u1"), ("green", "u1"), ("blue", "u1")
     ]
 
     normals = np.zeros_like(xyz)
@@ -150,29 +150,38 @@ def storePly(path,
     ply_data.write(path)
 
 
-def read_colmap_scene_info(path: str,
-                           images: str,
-                           depths: str,
-                           eval: bool,
-                           train_test_exp: bool,
-                           llffhold: int = 8):
-    try:
-        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
-        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
-        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
-    except Exception:
-        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
-        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
-        cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
+def extract_scene_info_from_colmap(data_dir_path: str,
+                                   images_dir_name: str,
+                                   depths_dir_name: str,
+                                   eval: bool,
+                                   train_test_exp: bool,
+                                   llff_hold: int = 8):
+    colmap_camera_files_dir_path = os.path.join(data_dir_path, "sparse", "0")
 
-    depth_params_file = os.path.join(path, "sparse/0", "depth_params.json")
-    # if depth_params_file isnt there AND depths file is here -> throw error
+    camera_extrinsic_file_stem_name = "images"
+    camera_intrinsic_file_stem_name = "cameras"
+    camera_extrinsic_file_stem_path = os.path.join(colmap_camera_files_dir_path, camera_extrinsic_file_stem_name)
+    camera_intrinsic_file_stem_path = os.path.join(colmap_camera_files_dir_path, camera_intrinsic_file_stem_name)
+    camera_bin_file_ext = "bin"
+    camera_txt_file_ext = "txt"
+
+    camera_extrinsic_bin_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_bin_file_ext)
+    if os.path.exists(camera_extrinsic_bin_file_path):
+        camera_intrinsic_bin_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_bin_file_ext)
+        cam_extrinsics = read_extrinsics_binary(camera_extrinsic_bin_file_path)
+        cam_intrinsics = read_intrinsics_binary(camera_intrinsic_bin_file_path)
+    else:
+        camera_extrinsic_txt_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_txt_file_ext)
+        camera_intrinsic_txt_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_txt_file_ext)
+        cam_extrinsics = read_extrinsics_text(camera_extrinsic_txt_file_path)
+        cam_intrinsics = read_intrinsics_text(camera_intrinsic_txt_file_path)
+
+    depth_params_file_path = os.path.join(colmap_camera_files_dir_path, "depth_params.json")
+
     depths_params = None
-    if depths != "":
+    if depths_dir_name:
         try:
-            with open(depth_params_file, "r") as f:
+            with open(depth_params_file_path, "r") as f:
                 depths_params = json.load(f)
             all_scales = np.array([depths_params[key]["scale"] for key in depths_params])
             if (all_scales > 0).sum():
@@ -181,55 +190,55 @@ def read_colmap_scene_info(path: str,
                 med_scale = 0
             for key in depths_params:
                 depths_params[key]["med_scale"] = med_scale
-
         except FileNotFoundError:
-            logging.info(f"Error: depth_params.json file not found at path '{depth_params_file}'.")
+            logging.info(f"Error: depth_params.json file not found at path '{depth_params_file_path}'.")
             sys.exit(1)
         except Exception as e:
             logging.info(f"An unexpected error occurred when trying to open depth_params.json file: {e}")
             sys.exit(1)
 
     if eval:
-        if "360" in path:
-            llffhold = 8
-        if llffhold:
+        if "360" in data_dir_path:
+            llff_hold = 8
+        if llff_hold:
             logging.info("------------LLFF HOLD-------------")
             cam_names = [cam_extrinsics[cam_id].name for cam_id in cam_extrinsics]
             cam_names = sorted(cam_names)
-            test_cam_names_list = [name for idx, name in enumerate(cam_names) if idx % llffhold == 0]
+            test_cam_names_list = [name for idx, name in enumerate(cam_names) if idx % llff_hold == 0]
         else:
-            with open(os.path.join(path, "sparse/0", "test.txt"), "r") as file:
+            with open(os.path.join(colmap_camera_files_dir_path, "test.txt"), "r") as file:
                 test_cam_names_list = [line.strip() for line in file]
     else:
         test_cam_names_list = []
 
-    reading_dir = "images" if images is None else images
+    reading_dir = "images" if images_dir_name is None else images_dir_name
     cam_infos_unsorted = create_camera_infos_from_colmap_data(
         colmap_cam_extrinsics=cam_extrinsics,
         colmap_cam_intrinsics=cam_intrinsics,
         depths_params=depths_params,
-        images_folder=os.path.join(path, reading_dir),
-        depths_folder=os.path.join(path, depths) if depths != "" else "",
+        images_folder=os.path.join(data_dir_path, reading_dir),
+        depths_folder=os.path.join(data_dir_path, depths_dir_name) if depths_dir_name != "" else "",
         test_cam_names_list=test_cam_names_list)
     cam_infos = sorted(cam_infos_unsorted.copy(), key=lambda x: x.image_name)
 
     train_cam_infos = [c for c in cam_infos if train_test_exp or not c.is_test]
     test_cam_infos = [c for c in cam_infos if c.is_test]
 
-    nerf_normalization = getNerfppNorm(train_cam_infos)
+    nerf_normalization = get_nerf_pp_norm(train_cam_infos)
 
-    ply_path = os.path.join(path, "sparse/0/points3D.ply")
-    bin_path = os.path.join(path, "sparse/0/points3D.bin")
-    txt_path = os.path.join(path, "sparse/0/points3D.txt")
-    if not os.path.exists(ply_path):
+    pcd_file_stem_path = os.path.join(colmap_camera_files_dir_path, "points3D")
+    pcd_ply_file_path = "{}.{}".format(pcd_file_stem_path, "ply")
+    pcd_bin_file_path = "{}.{}".format(pcd_file_stem_path, "bin")
+    pcd_txt_file_path = "{}.{}".format(pcd_file_stem_path, "txt")
+    if not os.path.exists(pcd_ply_file_path):
         logging.info("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
-            xyz, rgb, _ = read_points3D_binary(bin_path)
+            xyz, rgb, _ = read_points3D_binary(pcd_bin_file_path)
         except Exception:
-            xyz, rgb, _ = read_points3D_text(txt_path)
-        storePly(ply_path, xyz, rgb)
+            xyz, rgb, _ = read_points3D_text(pcd_txt_file_path)
+        store_ply(pcd_ply_file_path, xyz, rgb)
     try:
-        pcd = fetchPly(ply_path)
+        pcd = read_basic_point_cloud_from_ply(pcd_ply_file_path)
     except Exception:
         pcd = None
 
@@ -238,7 +247,7 @@ def read_colmap_scene_info(path: str,
         train_cameras=train_cam_infos,
         test_cameras=test_cam_infos,
         nerf_normalization=nerf_normalization,
-        ply_path=ply_path,
+        ply_path=pcd_ply_file_path,
         is_nerf_synthetic=False)
     return scene_info
 
@@ -332,7 +341,7 @@ def read_nerf_synthetic_info(path: str,
         train_cam_infos.extend(test_cam_infos)
         test_cam_infos = []
 
-    nerf_normalization = getNerfppNorm(train_cam_infos)
+    nerf_normalization = get_nerf_pp_norm(train_cam_infos)
 
     ply_path = os.path.join(path, "points3d.ply")
     if not os.path.exists(ply_path):
@@ -345,9 +354,9 @@ def read_nerf_synthetic_info(path: str,
         shs = np.random.random((num_pts, 3)) / 255.0
         pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
 
-        storePly(ply_path, xyz, SH2RGB(shs) * 255)
+        store_ply(ply_path, xyz, SH2RGB(shs) * 255)
     try:
-        pcd = fetchPly(ply_path)
+        pcd = read_basic_point_cloud_from_ply(ply_path)
     except Exception:
         pcd = None
 

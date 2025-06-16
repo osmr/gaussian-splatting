@@ -1,4 +1,4 @@
-from scene.gaussian_model import BasicPointCloud
+from scene.basic_point_cloud import BasicPointCloud
 
 
 class SceneInfo:

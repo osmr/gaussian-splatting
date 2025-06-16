@@ -15,12 +15,6 @@ import numpy as np
 from typing import NamedTuple
 
 
-class BasicPointCloud(NamedTuple):
-    points: np.ndarray
-    colors: np.ndarray
-    normals: np.ndarray
-
-
 def geom_transform_points(points,
                           transf_matrix):
     P, _ = points.shape

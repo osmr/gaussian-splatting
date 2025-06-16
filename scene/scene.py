@@ -14,7 +14,7 @@ import random
 import json
 import logging
 from utils.system_utils import searchForMaxIteration
-from scene.dataset_readers import read_colmap_scene_info, read_nerf_synthetic_info
+from scene.dataset_readers import extract_scene_info_from_colmap, read_nerf_synthetic_info
 from scene.gaussian_model import GaussianModel
 from arguments.model_params import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, serialize_camera_to_dict
@@ -43,10 +43,10 @@ class Scene:
         self.test_cameras = {}
 
         if os.path.exists(os.path.join(model_params.source_path, "sparse")):
-            scene_info = read_colmap_scene_info(
-                path=model_params.source_path,
-                images=model_params.images,
-                depths=model_params.depths,
+            scene_info = extract_scene_info_from_colmap(
+                data_dir_path=model_params.source_path,
+                images_dir_name=model_params.images,
+                depths_dir_name=model_params.depths,
                 eval=model_params.eval,
                 train_test_exp=model_params.train_test_exp)
         elif os.path.exists(os.path.join(model_params.source_path, "transforms_train.json")):

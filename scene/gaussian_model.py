@@ -18,7 +18,7 @@ from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotati
 from torch import nn
 from utils.sh_utils import RGB2SH
 from simple_knn._C import distCUDA2
-from utils.graphics_utils import BasicPointCloud
+from scene.basic_point_cloud import BasicPointCloud
 from utils.general_utils import build_scaling_rotation, strip_symmetric
 from scene.camera_info import CameraInfo
 
