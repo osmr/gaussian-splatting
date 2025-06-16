@@ -13,7 +13,6 @@ import os
 import sys
 import logging
 from PIL import Image
-from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
@@ -24,15 +23,8 @@ from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 from scene.camera_info import CameraInfo
+from scene.scene_info import SceneInfo
 
-
-class SceneInfo(NamedTuple):
-    point_cloud: BasicPointCloud
-    train_cameras: list
-    test_cameras: list
-    nerf_normalization: dict
-    ply_path: str
-    is_nerf_synthetic: bool
 
 
 def getNerfppNorm(cam_info):
@@ -59,23 +51,23 @@ def getNerfppNorm(cam_info):
     return {"translate": translate, "radius": radius}
 
 
-def readColmapCameras(cam_extrinsics,
-                      cam_intrinsics,
-                      depths_params,
-                      images_folder,
-                      depths_folder,
-                      test_cam_names_list):
+def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
+                                         colmap_cam_intrinsics: dict,
+                                         depths_params: dict | None,
+                                         images_folder: str,
+                                         depths_folder: str,
+                                         test_cam_names_list: list[str]) -> list[CameraInfo]:
     cam_infos = []
-    for idx, key in enumerate(cam_extrinsics):
-        sys.stdout.write('\r')
+    for idx, key in enumerate(colmap_cam_extrinsics):
+        sys.stdout.write("\r")
         # logging.info('\r')
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
+        sys.stdout.write("Reading camera {}/{}".format(idx + 1, len(colmap_cam_extrinsics)))
         sys.stdout.flush()
         # logging.info("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
 
-        extr = cam_extrinsics[key]
-        intr = cam_intrinsics[extr.camera_id]
+        extr = colmap_cam_extrinsics[key]
+        intr = colmap_cam_intrinsics[extr.camera_id]
         height = intr.height
         width = intr.width
 
@@ -122,7 +114,7 @@ def readColmapCameras(cam_extrinsics,
             is_test=image_name in test_cam_names_list)
         cam_infos.append(cam_info)
 
-    sys.stdout.write('\n')
+    sys.stdout.write("\n")
     # logging.info('\n')
     return cam_infos
 
@@ -212,9 +204,9 @@ def read_colmap_scene_info(path: str,
         test_cam_names_list = []
 
     reading_dir = "images" if images is None else images
-    cam_infos_unsorted = readColmapCameras(
-        cam_extrinsics=cam_extrinsics,
-        cam_intrinsics=cam_intrinsics,
+    cam_infos_unsorted = create_camera_infos_from_colmap_data(
+        colmap_cam_extrinsics=cam_extrinsics,
+        colmap_cam_intrinsics=cam_intrinsics,
         depths_params=depths_params,
         images_folder=os.path.join(path, reading_dir),
         depths_folder=os.path.join(path, depths) if depths != "" else "",
