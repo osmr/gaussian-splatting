@@ -19,9 +19,9 @@ from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
 from pathlib import Path
-from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.basic_point_cloud import BasicPointCloud
+from scene.basic_point_cloud_serializer import BasicPointCloudSerializer
 from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
@@ -119,37 +119,6 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
     return cam_infos
 
 
-def read_basic_point_cloud_from_ply(ply_file_path) -> BasicPointCloud:
-    ply_data = PlyData.read(ply_file_path)
-    vertices = ply_data["vertex"]
-    positions = np.vstack([vertices["x"], vertices["y"], vertices["z"]]).T
-    colors = np.vstack([vertices["red"], vertices["green"], vertices["blue"]]).T / 255.0
-    normals = np.vstack([vertices["nx"], vertices["ny"], vertices["nz"]]).T
-    return BasicPointCloud(points=positions, colors=colors, normals=normals)
-
-
-def store_ply(path,
-              xyz,
-              rgb):
-    # Define the dtype for the structured array
-    dtype = [
-        ("x", "f4"), ("y", "f4"), ("z", "f4"),
-        ("nx", "f4"), ("ny", "f4"), ("nz", "f4"),
-        ("red", "u1"), ("green", "u1"), ("blue", "u1")
-    ]
-
-    normals = np.zeros_like(xyz)
-
-    elements = np.empty(xyz.shape[0], dtype=dtype)
-    attributes = np.concatenate((xyz, normals, rgb), axis=1)
-    elements[:] = list(map(tuple, attributes))
-
-    # Create the PlyData object and write to file
-    vertex_element = PlyElement.describe(elements, "vertex")
-    ply_data = PlyData([vertex_element])
-    ply_data.write(path)
-
-
 def extract_scene_info_from_colmap(data_dir_path: str,
                                    images_dir_name: str,
                                    depths_dir_name: str,
@@ -236,9 +205,16 @@ def extract_scene_info_from_colmap(data_dir_path: str,
             xyz, rgb, _ = read_points3D_binary(pcd_bin_file_path)
         except Exception:
             xyz, rgb, _ = read_points3D_text(pcd_txt_file_path)
-        store_ply(pcd_ply_file_path, xyz, rgb)
+
+        # store_ply(pcd_ply_file_path, xyz, rgb)
+
+        BasicPointCloudSerializer.save_to_ply(
+            data=BasicPointCloud(
+                points=xyz,
+                colors=(rgb / 255.0)),
+            ply_file_path=pcd_ply_file_path)
     try:
-        pcd = read_basic_point_cloud_from_ply(pcd_ply_file_path)
+        pcd = BasicPointCloudSerializer.load_from_ply(ply_file_path=pcd_ply_file_path)
     except Exception:
         pcd = None
 
@@ -352,11 +328,17 @@ def read_nerf_synthetic_info(path: str,
         # We create random points inside the bounds of the synthetic Blender scenes
         xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
         shs = np.random.random((num_pts, 3)) / 255.0
-        pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
 
-        store_ply(ply_path, xyz, SH2RGB(shs) * 255)
+        # pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+        # store_ply(ply_path, xyz, SH2RGB(shs) * 255)
+
+        BasicPointCloudSerializer.save_to_ply(
+            data=BasicPointCloud(
+                points=xyz,
+                colors=SH2RGB(shs)),
+            ply_file_path=ply_path)
     try:
-        pcd = read_basic_point_cloud_from_ply(ply_path)
+        pcd = BasicPointCloudSerializer.load_from_ply(ply_file_path=ply_path)
     except Exception:
         pcd = None
 
