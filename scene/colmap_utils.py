@@ -5,7 +5,7 @@ import struct
 def colmap_binary_read_next_bytes(fid: BinaryIO,
                                   num_bytes: int,
                                   format_char_sequence: str,
-                                  endian_character: str = "<"):
+                                  endian_character: str = "<") -> tuple:
     """
     Read and unpack the next bytes from a binary file.
 

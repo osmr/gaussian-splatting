@@ -14,31 +14,31 @@ import collections
 from scene.colmap_utils import colmap_binary_read_next_bytes
 
 
-CameraModel = collections.namedtuple(
-    "CameraModel", ["model_id", "model_name", "num_params"])
+# CameraModel = collections.namedtuple(
+#     "CameraModel", ["model_id", "model_name", "num_params"])
 Camera = collections.namedtuple(
     "Camera", ["id", "model", "width", "height", "params"])
 BaseImage = collections.namedtuple(
     "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids"])
 Point3D = collections.namedtuple(
     "Point3D", ["id", "xyz", "rgb", "error", "image_ids", "point2D_idxs"])
-CAMERA_MODELS = {
-    CameraModel(model_id=0, model_name="SIMPLE_PINHOLE", num_params=3),
-    CameraModel(model_id=1, model_name="PINHOLE", num_params=4),
-    CameraModel(model_id=2, model_name="SIMPLE_RADIAL", num_params=4),
-    CameraModel(model_id=3, model_name="RADIAL", num_params=5),
-    CameraModel(model_id=4, model_name="OPENCV", num_params=8),
-    CameraModel(model_id=5, model_name="OPENCV_FISHEYE", num_params=8),
-    CameraModel(model_id=6, model_name="FULL_OPENCV", num_params=12),
-    CameraModel(model_id=7, model_name="FOV", num_params=5),
-    CameraModel(model_id=8, model_name="SIMPLE_RADIAL_FISHEYE", num_params=4),
-    CameraModel(model_id=9, model_name="RADIAL_FISHEYE", num_params=5),
-    CameraModel(model_id=10, model_name="THIN_PRISM_FISHEYE", num_params=12)
-}
-CAMERA_MODEL_IDS = dict([(camera_model.model_id, camera_model)
-                         for camera_model in CAMERA_MODELS])
-CAMERA_MODEL_NAMES = dict([(camera_model.model_name, camera_model)
-                           for camera_model in CAMERA_MODELS])
+# CAMERA_MODELS = {
+#     CameraModel(model_id=0, model_name="SIMPLE_PINHOLE", num_params=3),
+#     CameraModel(model_id=1, model_name="PINHOLE", num_params=4),
+#     CameraModel(model_id=2, model_name="SIMPLE_RADIAL", num_params=4),
+#     CameraModel(model_id=3, model_name="RADIAL", num_params=5),
+#     CameraModel(model_id=4, model_name="OPENCV", num_params=8),
+#     CameraModel(model_id=5, model_name="OPENCV_FISHEYE", num_params=8),
+#     CameraModel(model_id=6, model_name="FULL_OPENCV", num_params=12),
+#     CameraModel(model_id=7, model_name="FOV", num_params=5),
+#     CameraModel(model_id=8, model_name="SIMPLE_RADIAL_FISHEYE", num_params=4),
+#     CameraModel(model_id=9, model_name="RADIAL_FISHEYE", num_params=5),
+#     CameraModel(model_id=10, model_name="THIN_PRISM_FISHEYE", num_params=12)
+# }
+# CAMERA_MODEL_IDS = dict([(camera_model.model_id, camera_model)
+#                          for camera_model in CAMERA_MODELS])
+# CAMERA_MODEL_NAMES = dict([(camera_model.model_name, camera_model)
+#                            for camera_model in CAMERA_MODELS])
 
 
 def qvec2rotmat(qvec):
@@ -71,31 +71,6 @@ def rotmat2qvec(R):
 class Image(BaseImage):
     def qvec2rotmat(self):
         return qvec2rotmat(self.qvec)
-
-
-def read_intrinsics_text(path):
-    """
-    Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
-    """
-    cameras = {}
-    with open(path, "r") as fid:
-        while True:
-            line = fid.readline()
-            if not line:
-                break
-            line = line.strip()
-            if len(line) > 0 and line[0] != "#":
-                elems = line.split()
-                camera_id = int(elems[0])
-                model = elems[1]
-                assert model == "PINHOLE", "While the loader support other types, the rest of the code assumes PINHOLE"
-                width = int(elems[2])
-                height = int(elems[3])
-                params = np.array(tuple(map(float, elems[4:])))
-                cameras[camera_id] = Camera(id=camera_id, model=model,
-                                            width=width, height=height,
-                                            params=params)
-    return cameras
 
 
 def read_extrinsics_binary(path_to_model_file):
@@ -133,35 +108,6 @@ def read_extrinsics_binary(path_to_model_file):
     return images
 
 
-def read_intrinsics_binary(path_to_model_file):
-    """
-    see: src/base/reconstruction.cc
-        void Reconstruction::WriteCamerasBinary(const std::string& path)
-        void Reconstruction::ReadCamerasBinary(const std::string& path)
-    """
-    cameras = {}
-    with open(path_to_model_file, "rb") as fid:
-        num_cameras = colmap_binary_read_next_bytes(fid, 8, "Q")[0]
-        for _ in range(num_cameras):
-            camera_properties = colmap_binary_read_next_bytes(
-                fid, num_bytes=24, format_char_sequence="iiQQ")
-            camera_id = camera_properties[0]
-            model_id = camera_properties[1]
-            model_name = CAMERA_MODEL_IDS[camera_properties[1]].model_name
-            width = camera_properties[2]
-            height = camera_properties[3]
-            num_params = CAMERA_MODEL_IDS[model_id].num_params
-            params = colmap_binary_read_next_bytes(fid, num_bytes=8 * num_params,
-                                                   format_char_sequence="d"*num_params)
-            cameras[camera_id] = Camera(id=camera_id,
-                                        model=model_name,
-                                        width=width,
-                                        height=height,
-                                        params=np.array(params))
-        assert len(cameras) == num_cameras
-    return cameras
-
-
 def read_extrinsics_text(path):
     """
     Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
@@ -185,9 +131,13 @@ def read_extrinsics_text(path):
                                        tuple(map(float, elems[1::3]))])
                 point3D_ids = np.array(tuple(map(int, elems[2::3])))
                 images[image_id] = Image(
-                    id=image_id, qvec=qvec, tvec=tvec,
-                    camera_id=camera_id, name=image_name,
-                    xys=xys, point3D_ids=point3D_ids)
+                    id=image_id,
+                    qvec=qvec,
+                    tvec=tvec,
+                    camera_id=camera_id,
+                    name=image_name,
+                    xys=xys,
+                    point3D_ids=point3D_ids)
     return images
 
 

@@ -13,9 +13,7 @@ import os
 import sys
 import logging
 from PIL import Image
-from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
-    read_extrinsics_binary, read_intrinsics_binary
-from scene.colmap_point_cloud_serializer import ColmapPointCloudSerializer
+from scene.colmap_loader import read_extrinsics_text, qvec2rotmat, read_extrinsics_binary
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
@@ -23,6 +21,8 @@ from pathlib import Path
 from utils.sh_utils import SH2RGB
 from scene.basic_point_cloud import BasicPointCloud
 from scene.basic_point_cloud_serializer import BasicPointCloudSerializer
+from scene.colmap_point_cloud_serializer import ColmapPointCloudSerializer
+from scene.colmap_camera_intrinsic_serializer import ColmapCameraIntrinsicSerializer
 from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
@@ -76,11 +76,11 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
 
-        if intr.model == "SIMPLE_PINHOLE":
+        if intr.model_name == "SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
-        elif intr.model == "PINHOLE":
+        elif intr.model_name == "PINHOLE":
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
@@ -139,12 +139,14 @@ def extract_scene_info_from_colmap(data_dir_path: str,
     if os.path.exists(camera_extrinsic_bin_file_path):
         camera_intrinsic_bin_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_bin_file_ext)
         cam_extrinsics = read_extrinsics_binary(camera_extrinsic_bin_file_path)
-        cam_intrinsics = read_intrinsics_binary(camera_intrinsic_bin_file_path)
+        # cam_intrinsics = read_intrinsics_binary(camera_intrinsic_bin_file_path)
+        cam_intrinsics = ColmapCameraIntrinsicSerializer.load_from_bin(bin_file_path=camera_intrinsic_bin_file_path)
     else:
         camera_extrinsic_txt_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_txt_file_ext)
         camera_intrinsic_txt_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_txt_file_ext)
         cam_extrinsics = read_extrinsics_text(camera_extrinsic_txt_file_path)
-        cam_intrinsics = read_intrinsics_text(camera_intrinsic_txt_file_path)
+        # cam_intrinsics = read_intrinsics_text(camera_intrinsic_txt_file_path)
+        cam_intrinsics = ColmapCameraIntrinsicSerializer.load_from_txt(txt_file_path=camera_intrinsic_txt_file_path)
 
     depth_params_file_path = os.path.join(colmap_camera_files_dir_path, "depth_params.json")
 
