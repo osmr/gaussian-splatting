@@ -1,17 +1,36 @@
-from typing import NamedTuple
 import numpy as np
 
 
-class CameraInfo(NamedTuple):
-    uid: int
-    R: np.ndarray
-    T: np.ndarray
-    fov_x: np.ndarray
-    fov_y: np.ndarray
-    depth_params: dict | None
-    image_path: str
-    image_name: str
-    depth_path: str
-    width: int
-    height: int
-    is_test: bool
+class CameraInfo:
+    def __init__(self,
+                 uid: int,
+                 R: np.ndarray,
+                 T: np.ndarray,
+                 width: int,
+                 height: int,
+                 fov_x: np.ndarray,
+                 fov_y: np.ndarray,
+                 depth_params: dict | None,
+                 image_path: str,
+                 image_name: str,
+                 depth_path: str,
+                 is_test: bool):
+        super(CameraInfo, self).__init__()
+
+        self.uid = uid
+
+        self.R = R
+        self.T = T
+
+        self.width = width
+        self.height = height
+        self.fov_x = fov_x
+        self.fov_y = fov_y
+
+        self.depth_params = depth_params
+
+        self.image_path = image_path
+        self.image_name = image_name
+        self.depth_path = depth_path
+
+        self.is_test = is_test

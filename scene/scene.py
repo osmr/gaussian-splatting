@@ -17,7 +17,7 @@ from utils.system_utils import searchForMaxIteration
 from scene.dataset_readers import read_colmap_scene_info, read_nerf_synthetic_info
 from scene.gaussian_model import GaussianModel
 from arguments.model_params import ModelParams
-from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
+from utils.camera_utils import cameraList_from_camInfos, serialize_camera_to_dict
 from scene.gaussian_model_serializer import GaussianModelSerializer
 
 
@@ -70,7 +70,7 @@ class Scene:
             if scene_info.train_cameras:
                 camlist.extend(scene_info.train_cameras)
             for id, cam in enumerate(camlist):
-                json_cams.append(camera_to_JSON(id, cam))
+                json_cams.append(serialize_camera_to_dict(id, cam))
             with open(os.path.join(self.model_path, "cameras.json"), "w") as file:
                 json.dump(json_cams, file)
 

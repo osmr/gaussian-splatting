@@ -21,7 +21,7 @@ import cv2
 WARNED = False
 
 
-def loadCam(args: ModelParams,
+def loadCam(model_params: ModelParams,
             id: int,
             cam_info: CameraInfo,
             resolution_scale: float,
@@ -49,11 +49,11 @@ def loadCam(args: ModelParams,
         inv_depth_map = None
 
     orig_w, orig_h = image.size
-    if args.resolution in [1, 2, 4, 8]:
-        resolution = (round(orig_w / (resolution_scale * args.resolution)),
-                      round(orig_h / (resolution_scale * args.resolution)))
+    if model_params.resolution in [1, 2, 4, 8]:
+        resolution = (round(orig_w / (resolution_scale * model_params.resolution)),
+                      round(orig_h / (resolution_scale * model_params.resolution)))
     else:  # should be a type that converts to float
-        if args.resolution == -1:
+        if model_params.resolution == -1:
             if orig_w > 1600:
                 global WARNED
                 if not WARNED:
@@ -65,7 +65,7 @@ def loadCam(args: ModelParams,
             else:
                 global_down = 1
         else:
-            global_down = orig_w / args.resolution
+            global_down = orig_w / model_params.resolution
 
         scale = float(global_down) * float(resolution_scale)
         resolution = (int(orig_w / scale), int(orig_h / scale))
@@ -82,8 +82,8 @@ def loadCam(args: ModelParams,
         inv_depth_map=inv_depth_map,
         image_name=cam_info.image_name,
         uid=id,
-        data_device=args.data_device,
-        train_test_exp=args.train_test_exp,
+        data_device=model_params.data_device,
+        train_test_exp=model_params.train_test_exp,
         is_test_dataset=is_test_dataset,
         is_test_view=cam_info.is_test)
 
@@ -97,7 +97,7 @@ def cameraList_from_camInfos(cam_infos: list[CameraInfo],
 
     for id, c in enumerate(cam_infos):
         camera_list.append(loadCam(
-            args=model_params,
+            model_params=model_params,
             id=id,
             cam_info=c,
             resolution_scale=resolution_scale,
@@ -107,8 +107,8 @@ def cameraList_from_camInfos(cam_infos: list[CameraInfo],
     return camera_list
 
 
-def camera_to_JSON(id: int,
-                   camera: CameraInfo):
+def serialize_camera_to_dict(id: int,
+                             camera: CameraInfo):
     Rt = np.zeros((4, 4))
     Rt[:3, :3] = camera.R.transpose()
     Rt[:3, 3] = camera.T
