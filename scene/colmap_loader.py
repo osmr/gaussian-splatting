@@ -10,18 +10,17 @@
 """
 
 import numpy as np
-import collections
-from scene.colmap_utils import colmap_binary_read_next_bytes
+# import collections
 
 
 # CameraModel = collections.namedtuple(
 #     "CameraModel", ["model_id", "model_name", "num_params"])
-Camera = collections.namedtuple(
-    "Camera", ["id", "model", "width", "height", "params"])
-BaseImage = collections.namedtuple(
-    "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids"])
-Point3D = collections.namedtuple(
-    "Point3D", ["id", "xyz", "rgb", "error", "image_ids", "point2D_idxs"])
+# Camera = collections.namedtuple(
+#     "Camera", ["id", "model", "width", "height", "params"])
+# BaseImage = collections.namedtuple(
+#     "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids"])
+# Point3D = collections.namedtuple(
+#     "Point3D", ["id", "xyz", "rgb", "error", "image_ids", "point2D_idxs"])
 # CAMERA_MODELS = {
 #     CameraModel(model_id=0, model_name="SIMPLE_PINHOLE", num_params=3),
 #     CameraModel(model_id=1, model_name="PINHOLE", num_params=4),
@@ -68,98 +67,25 @@ def rotmat2qvec(R):
     return qvec
 
 
-class Image(BaseImage):
-    def qvec2rotmat(self):
-        return qvec2rotmat(self.qvec)
-
-
-def read_extrinsics_binary(path_to_model_file):
-    """
-    see: src/base/reconstruction.cc
-        void Reconstruction::ReadImagesBinary(const std::string& path)
-        void Reconstruction::WriteImagesBinary(const std::string& path)
-    """
-    images = {}
-    with open(path_to_model_file, "rb") as fid:
-        num_reg_images = colmap_binary_read_next_bytes(fid, 8, "Q")[0]
-        for _ in range(num_reg_images):
-            binary_image_properties = colmap_binary_read_next_bytes(
-                fid, num_bytes=64, format_char_sequence="idddddddi")
-            image_id = binary_image_properties[0]
-            qvec = np.array(binary_image_properties[1:5])
-            tvec = np.array(binary_image_properties[5:8])
-            camera_id = binary_image_properties[8]
-            image_name = ""
-            current_char = colmap_binary_read_next_bytes(fid, 1, "c")[0]
-            while current_char != b"\x00":   # look for the ASCII 0 entry
-                image_name += current_char.decode("utf-8")
-                current_char = colmap_binary_read_next_bytes(fid, 1, "c")[0]
-            num_points2D = colmap_binary_read_next_bytes(fid, num_bytes=8,
-                                                         format_char_sequence="Q")[0]
-            x_y_id_s = colmap_binary_read_next_bytes(fid, num_bytes=24 * num_points2D,
-                                                     format_char_sequence="ddq"*num_points2D)
-            xys = np.column_stack([tuple(map(float, x_y_id_s[0::3])),
-                                   tuple(map(float, x_y_id_s[1::3]))])
-            point3D_ids = np.array(tuple(map(int, x_y_id_s[2::3])))
-            images[image_id] = Image(
-                id=image_id, qvec=qvec, tvec=tvec,
-                camera_id=camera_id, name=image_name,
-                xys=xys, point3D_ids=point3D_ids)
-    return images
-
-
-def read_extrinsics_text(path):
-    """
-    Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
-    """
-    images = {}
-    with open(path, "r") as fid:
-        while True:
-            line = fid.readline()
-            if not line:
-                break
-            line = line.strip()
-            if len(line) > 0 and line[0] != "#":
-                elems = line.split()
-                image_id = int(elems[0])
-                qvec = np.array(tuple(map(float, elems[1:5])))
-                tvec = np.array(tuple(map(float, elems[5:8])))
-                camera_id = int(elems[8])
-                image_name = elems[9]
-                elems = fid.readline().split()
-                xys = np.column_stack([tuple(map(float, elems[0::3])),
-                                       tuple(map(float, elems[1::3]))])
-                point3D_ids = np.array(tuple(map(int, elems[2::3])))
-                images[image_id] = Image(
-                    id=image_id,
-                    qvec=qvec,
-                    tvec=tvec,
-                    camera_id=camera_id,
-                    name=image_name,
-                    xys=xys,
-                    point3D_ids=point3D_ids)
-    return images
-
-
-def read_colmap_bin_array(path):
-    """
-    Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_dense.py
-
-    :param path: path to the colmap binary file.
-    :return: nd array with the floating point values in the value
-    """
-    with open(path, "rb") as fid:
-        width, height, channels = np.genfromtxt(fid, delimiter="&", max_rows=1,
-                                                usecols=(0, 1, 2), dtype=int)
-        fid.seek(0)
-        num_delimiter = 0
-        byte = fid.read(1)
-        while True:
-            if byte == b"&":
-                num_delimiter += 1
-                if num_delimiter >= 3:
-                    break
-            byte = fid.read(1)
-        array = np.fromfile(fid, np.float32)
-    array = array.reshape((width, height, channels), order="F")
-    return np.transpose(array, (1, 0, 2)).squeeze()
+# def read_colmap_bin_array(path):
+#     """
+#     Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_dense.py
+#
+#     :param path: path to the colmap binary file.
+#     :return: nd array with the floating point values in the value
+#     """
+#     with open(path, "rb") as fid:
+#         width, height, channels = np.genfromtxt(fid, delimiter="&", max_rows=1,
+#                                                 usecols=(0, 1, 2), dtype=int)
+#         fid.seek(0)
+#         num_delimiter = 0
+#         byte = fid.read(1)
+#         while True:
+#             if byte == b"&":
+#                 num_delimiter += 1
+#                 if num_delimiter >= 3:
+#                     break
+#             byte = fid.read(1)
+#         array = np.fromfile(fid, np.float32)
+#     array = array.reshape((width, height, channels), order="F")
+#     return np.transpose(array, (1, 0, 2)).squeeze()

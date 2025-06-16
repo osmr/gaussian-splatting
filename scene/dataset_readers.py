@@ -13,7 +13,7 @@ import os
 import sys
 import logging
 from PIL import Image
-from scene.colmap_loader import read_extrinsics_text, qvec2rotmat, read_extrinsics_binary
+from scene.colmap_loader import qvec2rotmat
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
@@ -23,6 +23,7 @@ from scene.basic_point_cloud import BasicPointCloud
 from scene.basic_point_cloud_serializer import BasicPointCloudSerializer
 from scene.colmap_point_cloud_serializer import ColmapPointCloudSerializer
 from scene.colmap_camera_intrinsic_serializer import ColmapCameraIntrinsicSerializer
+from scene.colmap_camera_extrinsic_serializer import ColmapCameraExtrinsicSerializer
 from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
@@ -88,7 +89,7 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
-        n_remove = len(extr.name.split('.')[-1]) + 1
+        n_remove = len(extr.image_name.split('.')[-1]) + 1
         depth_params = None
         if depths_params is not None:
             try:
@@ -96,9 +97,9 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
             except Exception:
                 logging.info("\n{} not found in depths_params".format(key))
 
-        image_path = os.path.join(images_folder, extr.name)
-        image_name = extr.name
-        depth_path = os.path.join(depths_folder, f"{extr.name[:-n_remove]}.png") if depths_folder != "" else ""
+        image_path = os.path.join(images_folder, extr.image_name)
+        image_name = extr.image_name
+        depth_path = os.path.join(depths_folder, f"{extr.image_name[:-n_remove]}.png") if depths_folder != "" else ""
 
         cam_info = CameraInfo(
             uid=uid,
@@ -138,14 +139,12 @@ def extract_scene_info_from_colmap(data_dir_path: str,
     camera_extrinsic_bin_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_bin_file_ext)
     if os.path.exists(camera_extrinsic_bin_file_path):
         camera_intrinsic_bin_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_bin_file_ext)
-        cam_extrinsics = read_extrinsics_binary(camera_extrinsic_bin_file_path)
-        # cam_intrinsics = read_intrinsics_binary(camera_intrinsic_bin_file_path)
+        cam_extrinsics = ColmapCameraExtrinsicSerializer.load_from_bin(bin_file_path=camera_extrinsic_bin_file_path)
         cam_intrinsics = ColmapCameraIntrinsicSerializer.load_from_bin(bin_file_path=camera_intrinsic_bin_file_path)
     else:
         camera_extrinsic_txt_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_txt_file_ext)
         camera_intrinsic_txt_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_txt_file_ext)
-        cam_extrinsics = read_extrinsics_text(camera_extrinsic_txt_file_path)
-        # cam_intrinsics = read_intrinsics_text(camera_intrinsic_txt_file_path)
+        cam_extrinsics = ColmapCameraExtrinsicSerializer.load_from_txt(txt_file_path=camera_extrinsic_txt_file_path)
         cam_intrinsics = ColmapCameraIntrinsicSerializer.load_from_txt(txt_file_path=camera_intrinsic_txt_file_path)
 
     depth_params_file_path = os.path.join(colmap_camera_files_dir_path, "depth_params.json")
