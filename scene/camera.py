@@ -14,8 +14,8 @@ class Camera(nn.Module):
                  colmap_id: int,
                  R: np.ndarray,
                  T: np.ndarray,
-                 FoVx: float,
-                 FoVy: float,
+                 fov_x: float,
+                 fov_y: float,
                  depth_params: dict | None,
                  image: Image,
                  inv_depth_map: np.ndarray | None,
@@ -33,8 +33,8 @@ class Camera(nn.Module):
         self.colmap_id = colmap_id
         self.R = R
         self.T = T
-        self.FoVx = FoVx
-        self.FoVy = FoVy
+        self.fov_x = fov_x
+        self.fov_y = fov_y
         self.image_name = image_name
 
         try:
@@ -97,7 +97,7 @@ class Camera(nn.Module):
         self.projection_matrix = getProjectionMatrix(
             znear=self.znear,
             zfar=self.zfar,
-            fovX=self.FoVx,
-            fovY=self.FoVy).transpose(0, 1).cuda()
+            fovX=self.fov_x,
+            fovY=self.fov_y).transpose(0, 1).cuda()
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]

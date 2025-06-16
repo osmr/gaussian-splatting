@@ -40,8 +40,8 @@ def render(viewpoint_camera: Camera,
         pass
 
     # Set up rasterization configuration
-    tan_fov_x = math.tan(viewpoint_camera.FoVx * 0.5)
-    tan_fov_y = math.tan(viewpoint_camera.FoVy * 0.5)
+    tan_fov_x = math.tan(viewpoint_camera.fov_x * 0.5)
+    tan_fov_y = math.tan(viewpoint_camera.fov_y * 0.5)
 
     raster_settings = GaussianRasterizationSettings(
         image_height=int(viewpoint_camera.image_height),

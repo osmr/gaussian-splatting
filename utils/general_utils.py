@@ -10,19 +10,23 @@
 """
 
 import torch
+# from torchvision.transforms.functional import pil_to_tensor
+# from torchvision.io import read_image
 import sys
 from datetime import datetime
 import numpy as np
 import random
+from PIL import Image
 
 
 def inverse_sigmoid(x):
     return torch.log(x / (1 - x))
 
 
-def PILtoTorch(pil_image,
-               resolution):
+def PILtoTorch(pil_image: Image,
+               resolution: tuple[int, int]):
     resized_image_PIL = pil_image.resize(resolution)
+    # pil_to_tensor(resized_image_PIL)
     resized_image = torch.from_numpy(np.array(resized_image_PIL)) / 255.0
     if len(resized_image.shape) == 3:
         return resized_image.permute(2, 0, 1)

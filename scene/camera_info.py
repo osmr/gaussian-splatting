@@ -6,8 +6,8 @@ class CameraInfo(NamedTuple):
     uid: int
     R: np.ndarray
     T: np.ndarray
-    FovY: np.ndarray
-    FovX: np.ndarray
+    fov_x: np.ndarray
+    fov_y: np.ndarray
     depth_params: dict | None
     image_path: str
     image_name: str

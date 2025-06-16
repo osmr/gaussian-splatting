@@ -75,8 +75,8 @@ def loadCam(args: ModelParams,
         colmap_id=cam_info.uid,
         R=cam_info.R,
         T=cam_info.T,
-        FoVx=cam_info.FovX,
-        FoVy=cam_info.FovY,
+        fov_x=cam_info.fov_x,
+        fov_y=cam_info.fov_y,
         depth_params=cam_info.depth_params,
         image=image,
         inv_depth_map=inv_depth_map,
@@ -125,7 +125,7 @@ def camera_to_JSON(id: int,
         "height": camera.height,
         "position": pos.tolist(),
         "rotation": serializable_array_2d,
-        "fy": fov2focal(camera.FovY, camera.height),
-        "fx": fov2focal(camera.FovX, camera.width)
+        "fy": fov2focal(camera.fov_y, camera.height),
+        "fx": fov2focal(camera.fov_x, camera.width)
     }
     return camera_entry
