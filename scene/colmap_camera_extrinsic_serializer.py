@@ -28,13 +28,13 @@ class ColmapCameraExtrinsicSerializer:
                     xys = np.column_stack([tuple(map(float, elements2[0::3])), tuple(map(float, elements2[1::3]))])
                     point3d_ids = np.array(tuple(map(int, elements2[2::3])))
                     camera_extrinsics[image_id] = ColmapCameraExtrinsic(
-                        id=image_id,
+                        image_id=image_id,
                         qvec=qvec,
                         tvec=tvec,
                         camera_id=camera_id,
-                        image_name=image_name,
-                        xys=xys,
-                        point3d_ids=point3d_ids)
+                        image_file_name=image_name,
+                        pts2d=xys,
+                        pts3d_ids=point3d_ids)
         return camera_extrinsics
 
     @staticmethod
@@ -59,33 +59,33 @@ class ColmapCameraExtrinsicSerializer:
                 qvec = np.array(binary_image_properties[1:5])
                 tvec = np.array(binary_image_properties[5:8])
                 camera_id = binary_image_properties[8]
-                image_name = ""
+                image_file_name = ""
                 current_char = colmap_binary_read_next_bytes(
                     fid=fid,
                     num_bytes=1,
                     format_char_sequence="c")[0]
                 while current_char != b"\x00":  # look for the ASCII 0 entry
-                    image_name += current_char.decode("utf-8")
+                    image_file_name += current_char.decode("utf-8")
                     current_char = colmap_binary_read_next_bytes(
                         fid=fid,
                         num_bytes=1,
                         format_char_sequence="c")[0]
-                num_points2D = colmap_binary_read_next_bytes(
+                num_pts = colmap_binary_read_next_bytes(
                     fid=fid,
                     num_bytes=8,
                     format_char_sequence="Q")[0]
-                xy_ids = colmap_binary_read_next_bytes(
+                pts_infos = colmap_binary_read_next_bytes(
                     fid=fid,
-                    num_bytes=(24 * num_points2D),
-                    format_char_sequence=("ddq" * num_points2D))
-                xys = np.column_stack([tuple(map(float, xy_ids[0::3])), tuple(map(float, xy_ids[1::3]))])
-                point3d_ids = np.array(tuple(map(int, xy_ids[2::3])))
+                    num_bytes=(24 * num_pts),
+                    format_char_sequence=("ddq" * num_pts))
+                pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
+                pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
                 camera_extrinsics[image_id] = ColmapCameraExtrinsic(
-                    id=image_id,
+                    image_id=image_id,
                     qvec=qvec,
                     tvec=tvec,
                     camera_id=camera_id,
-                    image_name=image_name,
-                    xys=xys,
-                    point3d_ids=point3d_ids)
+                    image_file_name=image_file_name,
+                    pts2d=pts2d,
+                    pts3d_ids=pts3d_ids)
         return camera_extrinsics

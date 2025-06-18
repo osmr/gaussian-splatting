@@ -57,12 +57,13 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
                                          colmap_cam_intrinsics: dict,
                                          depths_params: dict | None,
                                          images_folder: str,
-                                         depths_folder: str,
+                                         depths_folder: str | None,
                                          test_cam_names_list: list[str]) -> list[CameraInfo]:
     cam_infos = []
     for idx, key in enumerate(colmap_cam_extrinsics):
         sys.stdout.write("\r")
         # logging.info('\r')
+
         # the exact output you're looking for:
         sys.stdout.write("Reading camera {}/{}".format(idx + 1, len(colmap_cam_extrinsics)))
         sys.stdout.flush()
@@ -89,7 +90,7 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
-        n_remove = len(extr.image_name.split('.')[-1]) + 1
+        n_remove = len(extr.image_file_name.split('.')[-1]) + 1
         depth_params = None
         if depths_params is not None:
             try:
@@ -97,9 +98,9 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
             except Exception:
                 logging.info("\n{} not found in depths_params".format(key))
 
-        image_path = os.path.join(images_folder, extr.image_name)
-        image_name = extr.image_name
-        depth_path = os.path.join(depths_folder, f"{extr.image_name[:-n_remove]}.png") if depths_folder != "" else ""
+        image_path = os.path.join(images_folder, extr.image_file_name)
+        image_name = extr.image_file_name
+        depth_path = os.path.join(depths_folder, f"{extr.image_file_name[:-n_remove]}.png") if depths_folder else ""
 
         cam_info = CameraInfo(
             uid=uid,
@@ -109,7 +110,7 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
             fov_y=FovY,
             depth_params=depth_params,
             image_path=str(image_path),
-            image_name=image_name,
+            image_file_name=image_name,
             depth_path=depth_path,
             width=width,
             height=height,
@@ -188,9 +189,9 @@ def extract_scene_info_from_colmap(data_dir_path: str,
         colmap_cam_intrinsics=cam_intrinsics,
         depths_params=depths_params,
         images_folder=os.path.join(data_dir_path, reading_dir),
-        depths_folder=os.path.join(data_dir_path, depths_dir_name) if depths_dir_name != "" else "",
+        depths_folder=os.path.join(data_dir_path, depths_dir_name) if depths_dir_name else None,
         test_cam_names_list=test_cam_names_list)
-    cam_infos = sorted(cam_infos_unsorted.copy(), key=lambda x: x.image_name)
+    cam_infos = sorted(cam_infos_unsorted.copy(), key=lambda x: x.image_file_name)
 
     train_cam_infos = [c for c in cam_infos if train_test_exp or not c.is_test]
     test_cam_infos = [c for c in cam_infos if c.is_test]
@@ -281,7 +282,7 @@ def read_cameras_from_transforms(path,
                 fov_x=FovX,
                 fov_y=FovY,
                 image_path=str(image_path),
-                image_name=image_name,
+                image_file_name=image_name,
                 width=image.size[0],
                 height=image.size[1],
                 depth_path=depth_path,

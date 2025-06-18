@@ -119,12 +119,12 @@ def training_report(tb_writer: Any | None,
                         gt_image = gt_image[..., gt_image.shape[-1] // 2:]
                     if tb_writer and (idx < 5):
                         tb_writer.add_images(
-                            config['name'] + "_view_{}/render".format(viewpoint.image_name),
+                            config['name'] + "_view_{}/render".format(viewpoint.image_file_name),
                             image[None],
                             global_step=iteration)
                         if iteration == testing_iterations[0]:
                             tb_writer.add_images(
-                                config['name'] + "_view_{}/ground_truth".format(viewpoint.image_name),
+                                config['name'] + "_view_{}/ground_truth".format(viewpoint.image_file_name),
                                 gt_image[None],
                                 global_step=iteration)
                     l1_test += l1_loss(image, gt_image).mean().double()

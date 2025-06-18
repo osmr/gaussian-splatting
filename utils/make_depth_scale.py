@@ -16,7 +16,7 @@ def get_scales(key, cameras, images, points3d_ordered, args):
     mask *= pts_idx < len(points3d_ordered)
 
     pts_idx = pts_idx[mask]
-    valid_xys = image_meta.xys[mask]
+    valid_xys = image_meta.pts2d[mask]
 
     if len(pts_idx) > 0:
         pts = points3d_ordered[pts_idx]
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     cam_intrinsics, images_metas, points3d = read_model(os.path.join(args.base_dir, "sparse", "0"), ext=f".{args.model_type}")
 
-    pts_indices = np.array([points3d[key].id for key in points3d])
+    pts_indices = np.array([points3d[key].image_id for key in points3d])
     pts_xyzs = np.array([points3d[key].xyz for key in points3d])
     points3d_ordered = np.zeros([pts_indices.max()+1, 3])
     points3d_ordered[pts_indices] = pts_xyzs

@@ -183,7 +183,7 @@ def write_cameras_text(cameras, path):
     with open(path, "w") as fid:
         fid.write(HEADER)
         for _, cam in cameras.items():
-            to_write = [cam.id, cam.model, cam.width, cam.height, *cam.params]
+            to_write = [cam.image_id, cam.model, cam.width, cam.height, *cam.params]
             line = " ".join([str(elem) for elem in to_write])
             fid.write(line + "\n")
 
@@ -198,7 +198,7 @@ def write_cameras_binary(cameras, path_to_model_file):
         write_next_bytes(fid, len(cameras), "Q")
         for _, cam in cameras.items():
             model_id = CAMERA_MODEL_NAMES[cam.model].model_id
-            camera_properties = [cam.id, model_id, cam.width, cam.height]
+            camera_properties = [cam.image_id, model_id, cam.width, cam.height]
             write_next_bytes(fid, camera_properties, "iiQQ")
             for p in cam.params:
                 write_next_bytes(fid, float(p), "d")
@@ -319,7 +319,7 @@ def write_images_text(images, path):
         fid.write(HEADER)
         for _, img in images.items():
             image_header = [
-                img.id,
+                img.image_id,
                 *img.qvec,
                 *img.tvec,
                 img.camera_id,
@@ -329,7 +329,7 @@ def write_images_text(images, path):
             fid.write(first_line + "\n")
 
             points_strings = []
-            for xy, point3D_id in zip(img.xys, img.point3D_ids):
+            for xy, point3D_id in zip(img.pts2d, img.point3D_ids):
                 points_strings.append(" ".join(map(str, [*xy, point3D_id])))
             fid.write(" ".join(points_strings) + "\n")
 
@@ -343,7 +343,7 @@ def write_images_binary(images, path_to_model_file):
     with open(path_to_model_file, "wb") as fid:
         write_next_bytes(fid, len(images), "Q")
         for _, img in images.items():
-            write_next_bytes(fid, img.id, "i")
+            write_next_bytes(fid, img.image_id, "i")
             write_next_bytes(fid, img.qvec.tolist(), "dddd")
             write_next_bytes(fid, img.tvec.tolist(), "ddd")
             write_next_bytes(fid, img.camera_id, "i")
@@ -351,7 +351,7 @@ def write_images_binary(images, path_to_model_file):
                 write_next_bytes(fid, char.encode("utf-8"), "c")
             write_next_bytes(fid, b"\x00", "c")
             write_next_bytes(fid, len(img.point3D_ids), "Q")
-            for xy, p3d_id in zip(img.xys, img.point3D_ids):
+            for xy, p3d_id in zip(img.pts2d, img.point3D_ids):
                 write_next_bytes(fid, [*xy, p3d_id], "ddq")
 
 
@@ -448,7 +448,7 @@ def write_points3D_text(points3D, path):
     with open(path, "w") as fid:
         fid.write(HEADER)
         for _, pt in points3D.items():
-            point_header = [pt.id, *pt.xyz, *pt.rgb, pt.error]
+            point_header = [pt.image_id, *pt.xyz, *pt.rgb, pt.error]
             fid.write(" ".join(map(str, point_header)) + " ")
             track_strings = []
             for image_id, point2D in zip(pt.image_ids, pt.point2D_idxs):
@@ -465,7 +465,7 @@ def write_points3D_binary(points3D, path_to_model_file):
     with open(path_to_model_file, "wb") as fid:
         write_next_bytes(fid, len(points3D), "Q")
         for _, pt in points3D.items():
-            write_next_bytes(fid, pt.id, "Q")
+            write_next_bytes(fid, pt.image_id, "Q")
             write_next_bytes(fid, pt.xyz.tolist(), "ddd")
             write_next_bytes(fid, pt.rgb.tolist(), "BBB")
             write_next_bytes(fid, pt.error, "d")

@@ -12,7 +12,7 @@ class CameraInfo:
                  fov_y: np.ndarray,
                  depth_params: dict | None,
                  image_path: str,
-                 image_name: str,
+                 image_file_name: str,
                  depth_path: str,
                  is_test: bool):
         super(CameraInfo, self).__init__()
@@ -30,7 +30,7 @@ class CameraInfo:
         self.depth_params = depth_params
 
         self.image_path = image_path
-        self.image_name = image_name
+        self.image_file_name = image_file_name
         self.depth_path = depth_path
 
         self.is_test = is_test
