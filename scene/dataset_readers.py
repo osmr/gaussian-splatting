@@ -22,8 +22,8 @@ from utils.sh_utils import SH2RGB
 from scene.basic_point_cloud import BasicPointCloud
 from scene.basic_point_cloud_serializer import BasicPointCloudSerializer
 from scene.colmap_point_cloud_serializer import ColmapPointCloudSerializer
-from scene.colmap_camera_intrinsic_serializer import ColmapCameraIntrinsicSerializer
-from scene.colmap_camera_extrinsic_serializer import ColmapCameraExtrinsicSerializer
+from scene.colmap_camera_serializer import ColmapCameraSerializer
+from scene.colmap_image_serializer import ColmapImageSerializer
 from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
@@ -128,27 +128,27 @@ def extract_scene_info_from_colmap(data_dir_path: str,
                                    eval: bool,
                                    train_test_exp: bool,
                                    llff_hold: int = 8):
-    colmap_camera_files_dir_path = os.path.join(data_dir_path, "sparse", "0")
+    colmap_metainfo_files_dir_path = os.path.join(data_dir_path, "sparse", "0")
 
-    camera_extrinsic_file_stem_name = "images"
-    camera_intrinsic_file_stem_name = "cameras"
-    camera_extrinsic_file_stem_path = os.path.join(colmap_camera_files_dir_path, camera_extrinsic_file_stem_name)
-    camera_intrinsic_file_stem_path = os.path.join(colmap_camera_files_dir_path, camera_intrinsic_file_stem_name)
-    camera_bin_file_ext = "bin"
-    camera_txt_file_ext = "txt"
+    colmap_images_file_stem_name = "images"
+    colmap_cameras_file_stem_name = "cameras"
+    colmap_images_file_stem_path = os.path.join(colmap_metainfo_files_dir_path, colmap_images_file_stem_name)
+    colmap_cameras_file_stem_path = os.path.join(colmap_metainfo_files_dir_path, colmap_cameras_file_stem_name)
+    colmap_bin_file_ext = "bin"
+    colmap_txt_file_ext = "txt"
 
-    camera_extrinsic_bin_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_bin_file_ext)
-    if os.path.exists(camera_extrinsic_bin_file_path):
-        camera_intrinsic_bin_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_bin_file_ext)
-        cam_extrinsics = ColmapCameraExtrinsicSerializer.load_from_bin(bin_file_path=camera_extrinsic_bin_file_path)
-        cam_intrinsics = ColmapCameraIntrinsicSerializer.load_from_bin(bin_file_path=camera_intrinsic_bin_file_path)
+    colmap_images_bin_file_path = "{}.{}".format(colmap_images_file_stem_path, colmap_bin_file_ext)
+    if os.path.exists(colmap_images_bin_file_path):
+        colmap_cameras_bin_file_path = "{}.{}".format(colmap_cameras_file_stem_path, colmap_bin_file_ext)
+        colmap_shots = ColmapImageSerializer.load_from_bin(bin_file_path=colmap_images_bin_file_path)
+        colmap_cameras = ColmapCameraSerializer.load_from_bin(bin_file_path=colmap_cameras_bin_file_path)
     else:
-        camera_extrinsic_txt_file_path = "{}.{}".format(camera_extrinsic_file_stem_path, camera_txt_file_ext)
-        camera_intrinsic_txt_file_path = "{}.{}".format(camera_intrinsic_file_stem_path, camera_txt_file_ext)
-        cam_extrinsics = ColmapCameraExtrinsicSerializer.load_from_txt(txt_file_path=camera_extrinsic_txt_file_path)
-        cam_intrinsics = ColmapCameraIntrinsicSerializer.load_from_txt(txt_file_path=camera_intrinsic_txt_file_path)
+        colmap_images_txt_file_path = "{}.{}".format(colmap_images_file_stem_path, colmap_txt_file_ext)
+        colmap_cameras_txt_file_path = "{}.{}".format(colmap_cameras_file_stem_path, colmap_txt_file_ext)
+        colmap_shots = ColmapImageSerializer.load_from_txt(txt_file_path=colmap_images_txt_file_path)
+        colmap_cameras = ColmapCameraSerializer.load_from_txt(txt_file_path=colmap_cameras_txt_file_path)
 
-    depth_params_file_path = os.path.join(colmap_camera_files_dir_path, "depth_params.json")
+    depth_params_file_path = os.path.join(colmap_metainfo_files_dir_path, "depth_params.json")
 
     depths_params = None
     if depths_dir_name:
@@ -174,19 +174,19 @@ def extract_scene_info_from_colmap(data_dir_path: str,
             llff_hold = 8
         if llff_hold:
             logging.info("------------LLFF HOLD-------------")
-            cam_names = [cam_extrinsics[cam_id].name for cam_id in cam_extrinsics]
+            cam_names = [colmap_shots[cam_id].name for cam_id in colmap_shots]
             cam_names = sorted(cam_names)
             test_cam_names_list = [name for idx, name in enumerate(cam_names) if idx % llff_hold == 0]
         else:
-            with open(os.path.join(colmap_camera_files_dir_path, "test.txt"), "r") as file:
+            with open(os.path.join(colmap_metainfo_files_dir_path, "test.txt"), "r") as file:
                 test_cam_names_list = [line.strip() for line in file]
     else:
         test_cam_names_list = []
 
     reading_dir = "images" if images_dir_name is None else images_dir_name
     cam_infos_unsorted = create_camera_infos_from_colmap_data(
-        colmap_cam_extrinsics=cam_extrinsics,
-        colmap_cam_intrinsics=cam_intrinsics,
+        colmap_cam_extrinsics=colmap_shots,
+        colmap_cam_intrinsics=colmap_cameras,
         depths_params=depths_params,
         images_folder=os.path.join(data_dir_path, reading_dir),
         depths_folder=os.path.join(data_dir_path, depths_dir_name) if depths_dir_name else None,
@@ -198,7 +198,7 @@ def extract_scene_info_from_colmap(data_dir_path: str,
 
     nerf_normalization = get_nerf_pp_norm(train_cam_infos)
 
-    pcd_file_stem_path = os.path.join(colmap_camera_files_dir_path, "points3D")
+    pcd_file_stem_path = os.path.join(colmap_metainfo_files_dir_path, "points3D")
     pcd_ply_file_path = "{}.{}".format(pcd_file_stem_path, "ply")
     pcd_bin_file_path = "{}.{}".format(pcd_file_stem_path, "bin")
     pcd_txt_file_path = "{}.{}".format(pcd_file_stem_path, "txt")

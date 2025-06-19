@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class ColmapCameraIntrinsic:
+class ColmapCamera:
     """
     COLMAP specific camera instrinsic parameters or `camera`.
     """
@@ -11,7 +11,7 @@ class ColmapCameraIntrinsic:
                  width: int,
                  height: int,
                  params: np.ndarray):
-        super(ColmapCameraIntrinsic, self).__init__()
+        super(ColmapCamera, self).__init__()
         assert (model_name == "PINHOLE")
 
         self.id = id

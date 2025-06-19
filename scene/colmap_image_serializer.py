@@ -1,12 +1,12 @@
 import numpy as np
-from scene.colmap_camera_extrinsic import ColmapCameraExtrinsic
+from scene.colmap_image import ColmapImage
 from scene.colmap_utils import colmap_binary_read_next_bytes
 
 
-class ColmapCameraExtrinsicSerializer:
+class ColmapImageSerializer:
 
     @staticmethod
-    def load_from_txt(txt_file_path: str) -> dict[int, ColmapCameraExtrinsic]:
+    def load_from_txt(txt_file_path: str) -> dict[int, ColmapImage]:
         """
         Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
         """
@@ -24,21 +24,19 @@ class ColmapCameraExtrinsicSerializer:
                     tvec = np.array(tuple(map(float, image_properties[5:8])))
                     camera_id = int(image_properties[8])
                     image_file_name = image_properties[9]
-                    pts_infos = fid.readline().split()
-                    pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
-                    pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
-                    camera_extrinsics[image_id] = ColmapCameraExtrinsic(
+                    _ = fid.readline().split()  # pts_infos
+                    # pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
+                    # pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
+                    camera_extrinsics[image_id] = ColmapImage(
                         image_id=image_id,
                         qvec=qvec,
                         tvec=tvec,
                         camera_id=camera_id,
-                        image_file_name=image_file_name,
-                        pts2d=pts2d,
-                        pts3d_ids=pts3d_ids)
+                        image_file_name=image_file_name)
         return camera_extrinsics
 
     @staticmethod
-    def load_from_bin(bin_file_path: str) -> dict[int, ColmapCameraExtrinsic]:
+    def load_from_bin(bin_file_path: str) -> dict[int, ColmapImage]:
         """
         see: src/base/reconstruction.cc
             void Reconstruction::WriteCamerasBinary(const std::string& path)
@@ -74,18 +72,16 @@ class ColmapCameraExtrinsicSerializer:
                     fid=fid,
                     num_bytes=8,
                     format_char_sequence="Q")[0]
-                pts_infos = colmap_binary_read_next_bytes(
+                _ = colmap_binary_read_next_bytes(  # pts_infos
                     fid=fid,
                     num_bytes=(24 * num_pts),
                     format_char_sequence=("ddq" * num_pts))
-                pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
-                pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
-                camera_extrinsics[image_id] = ColmapCameraExtrinsic(
+                # pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
+                # pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
+                camera_extrinsics[image_id] = ColmapImage(
                     image_id=image_id,
                     qvec=qvec,
                     tvec=tvec,
                     camera_id=camera_id,
-                    image_file_name=image_file_name,
-                    pts2d=pts2d,
-                    pts3d_ids=pts3d_ids)
+                    image_file_name=image_file_name)
         return camera_extrinsics

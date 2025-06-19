@@ -1,6 +1,6 @@
 import numpy as np
 from collections import namedtuple
-from scene.colmap_camera_intrinsic import ColmapCameraIntrinsic
+from scene.colmap_camera import ColmapCamera
 from scene.colmap_utils import colmap_binary_read_next_bytes
 
 
@@ -22,10 +22,10 @@ CAMERA_MODELS = (
 CAMERA_MODEL_IDS = {camera_model.model_id: camera_model for camera_model in CAMERA_MODELS}
 
 
-class ColmapCameraIntrinsicSerializer:
+class ColmapCameraSerializer:
 
     @staticmethod
-    def load_from_txt(txt_file_path: str) -> dict[int, ColmapCameraIntrinsic]:
+    def load_from_txt(txt_file_path: str) -> dict[int, ColmapCamera]:
         """
         Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
         """
@@ -43,7 +43,7 @@ class ColmapCameraIntrinsicSerializer:
                     width = int(elements[2])
                     height = int(elements[3])
                     params = np.array(tuple(map(float, elements[4:])))
-                    camera_intrinsics[camera_id] = ColmapCameraIntrinsic(
+                    camera_intrinsics[camera_id] = ColmapCamera(
                         id=camera_id,
                         model_name=model_name,
                         width=width,
@@ -52,7 +52,7 @@ class ColmapCameraIntrinsicSerializer:
         return camera_intrinsics
 
     @staticmethod
-    def load_from_bin(bin_file_path: str) -> dict[int, ColmapCameraIntrinsic]:
+    def load_from_bin(bin_file_path: str) -> dict[int, ColmapCamera]:
         """
         see: src/base/reconstruction.cc
             void Reconstruction::WriteCamerasBinary(const std::string& path)
@@ -79,7 +79,7 @@ class ColmapCameraIntrinsicSerializer:
                     fid=fid,
                     num_bytes=(8 * num_params),
                     format_char_sequence=("d" * num_params))
-                camera_intrinsics[camera_id] = ColmapCameraIntrinsic(
+                camera_intrinsics[camera_id] = ColmapCamera(
                     id=camera_id,
                     model_name=model_name,
                     width=width,
