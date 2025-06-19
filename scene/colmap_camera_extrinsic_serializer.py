@@ -17,24 +17,24 @@ class ColmapCameraExtrinsicSerializer:
                 if not line:
                     break
                 line = line.strip()
-                if len(line) > 0 and line[0] != "#":
-                    elements1 = line.split()
-                    image_id = int(elements1[0])
-                    qvec = np.array(tuple(map(float, elements1[1:5])))
-                    tvec = np.array(tuple(map(float, elements1[5:8])))
-                    camera_id = int(elements1[8])
-                    image_name = elements1[9]
-                    elements2 = fid.readline().split()
-                    xys = np.column_stack([tuple(map(float, elements2[0::3])), tuple(map(float, elements2[1::3]))])
-                    point3d_ids = np.array(tuple(map(int, elements2[2::3])))
+                if (len(line) > 0) and (line[0] != "#"):
+                    image_properties = line.split()
+                    image_id = int(image_properties[0])
+                    qvec = np.array(tuple(map(float, image_properties[1:5])))
+                    tvec = np.array(tuple(map(float, image_properties[5:8])))
+                    camera_id = int(image_properties[8])
+                    image_file_name = image_properties[9]
+                    pts_infos = fid.readline().split()
+                    pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
+                    pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
                     camera_extrinsics[image_id] = ColmapCameraExtrinsic(
                         image_id=image_id,
                         qvec=qvec,
                         tvec=tvec,
                         camera_id=camera_id,
-                        image_file_name=image_name,
-                        pts2d=xys,
-                        pts3d_ids=point3d_ids)
+                        image_file_name=image_file_name,
+                        pts2d=pts2d,
+                        pts3d_ids=pts3d_ids)
         return camera_extrinsics
 
     @staticmethod

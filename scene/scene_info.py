@@ -1,11 +1,12 @@
 from scene.basic_point_cloud import BasicPointCloud
+from scene.camera_info import CameraInfo
 
 
 class SceneInfo:
     def __init__(self,
                  point_cloud: BasicPointCloud,
-                 train_cameras: list,
-                 test_cameras: list,
+                 train_cameras: list[CameraInfo],
+                 test_cameras: list[CameraInfo],
                  nerf_normalization: dict,
                  ply_path: str,
                  is_nerf_synthetic: bool):

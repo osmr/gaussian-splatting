@@ -69,52 +69,52 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
         sys.stdout.flush()
         # logging.info("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
 
-        extr = colmap_cam_extrinsics[key]
-        intr = colmap_cam_intrinsics[extr.camera_id]
-        height = intr.height
-        width = intr.width
+        extrinsics = colmap_cam_extrinsics[key]
+        intrinsics = colmap_cam_intrinsics[extrinsics.camera_id]
+        height = intrinsics.height
+        width = intrinsics.width
 
-        uid = intr.id
-        R = np.transpose(qvec2rotmat(extr.qvec))
-        T = np.array(extr.tvec)
+        uid = intrinsics.id
+        R = np.transpose(qvec2rotmat(extrinsics.qvec))
+        T = np.array(extrinsics.tvec)
 
-        if intr.model_name == "SIMPLE_PINHOLE":
-            focal_length_x = intr.params[0]
-            FovY = focal2fov(focal_length_x, height)
-            FovX = focal2fov(focal_length_x, width)
-        elif intr.model_name == "PINHOLE":
-            focal_length_x = intr.params[0]
-            focal_length_y = intr.params[1]
-            FovY = focal2fov(focal_length_y, height)
-            FovX = focal2fov(focal_length_x, width)
+        if intrinsics.model_name == "SIMPLE_PINHOLE":
+            focal_length_x = intrinsics.params[0]
+            fov_x = focal2fov(focal_length_x, width)
+            fov_y = focal2fov(focal_length_x, height)
+        elif intrinsics.model_name == "PINHOLE":
+            focal_length_x = intrinsics.params[0]
+            focal_length_y = intrinsics.params[1]
+            fov_x = focal2fov(focal_length_x, width)
+            fov_y = focal2fov(focal_length_y, height)
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
-        n_remove = len(extr.image_file_name.split('.')[-1]) + 1
+        n_remove = len(extrinsics.image_file_name.split('.')[-1]) + 1
         depth_params = None
         if depths_params is not None:
             try:
-                depth_params = depths_params[extr.name[:-n_remove]]
+                depth_params = depths_params[extrinsics.name[:-n_remove]]
             except Exception:
                 logging.info("\n{} not found in depths_params".format(key))
 
-        image_path = os.path.join(images_folder, extr.image_file_name)
-        image_name = extr.image_file_name
-        depth_path = os.path.join(depths_folder, f"{extr.image_file_name[:-n_remove]}.png") if depths_folder else ""
+        image_file_path = os.path.join(images_folder, extrinsics.image_file_name)
+        image_file_name = extrinsics.image_file_name
+        depth_path = os.path.join(depths_folder, f"{extrinsics.image_file_name[:-n_remove]}.png") if depths_folder else ""
 
         cam_info = CameraInfo(
             uid=uid,
             R=R,
             T=T,
-            fov_x=FovX,
-            fov_y=FovY,
-            depth_params=depth_params,
-            image_path=str(image_path),
-            image_file_name=image_name,
-            depth_path=depth_path,
             width=width,
             height=height,
-            is_test=image_name in test_cam_names_list)
+            fov_x=fov_x,
+            fov_y=fov_y,
+            depth_params=depth_params,
+            image_file_path=str(image_file_path),
+            image_file_name=image_file_name,
+            depth_path=depth_path,
+            is_test=image_file_name in test_cam_names_list)
         cam_infos.append(cam_info)
 
     sys.stdout.write("\n")
@@ -213,7 +213,7 @@ def extract_scene_info_from_colmap(data_dir_path: str,
 
         BasicPointCloudSerializer.save_to_ply(
             data=BasicPointCloud(
-                points=cm_pcd.points,
+                positions=cm_pcd.positions,
                 colors=(cm_pcd.colors / 255.0)),
             ply_file_path=pcd_ply_file_path)
     try:
@@ -281,7 +281,7 @@ def read_cameras_from_transforms(path,
                 T=T,
                 fov_x=FovX,
                 fov_y=FovY,
-                image_path=str(image_path),
+                image_file_path=str(image_path),
                 image_file_name=image_name,
                 width=image.size[0],
                 height=image.size[1],
@@ -334,7 +334,7 @@ def read_nerf_synthetic_info(path: str,
 
         BasicPointCloudSerializer.save_to_ply(
             data=BasicPointCloud(
-                points=xyz,
+                positions=xyz,
                 colors=SH2RGB(shs)),
             ply_file_path=pcd_ply_file_path)
     try:

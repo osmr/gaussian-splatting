@@ -27,7 +27,7 @@ def loadCam(model_params: ModelParams,
             resolution_scale: float,
             is_nerf_synthetic: bool,
             is_test_dataset: bool):
-    image = Image.open(cam_info.image_path)
+    image = Image.open(cam_info.image_file_path)
 
     if cam_info.depth_path != "":
         try:
