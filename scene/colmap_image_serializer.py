@@ -6,11 +6,11 @@ from scene.colmap_utils import colmap_binary_read_next_bytes
 class ColmapImageSerializer:
 
     @staticmethod
-    def load_from_txt(txt_file_path: str) -> dict[int, ColmapImage]:
+    def load_from_txt(txt_file_path: str) -> list[ColmapImage]:
         """
         Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
         """
-        camera_extrinsics = {}
+        colmap_images = []
         with open(txt_file_path, "r") as fid:
             while True:
                 line = fid.readline()
@@ -27,22 +27,22 @@ class ColmapImageSerializer:
                     _ = fid.readline().split()  # pts_infos
                     # pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
                     # pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
-                    camera_extrinsics[image_id] = ColmapImage(
+                    colmap_images.append(ColmapImage(
                         image_id=image_id,
                         qvec=qvec,
                         tvec=tvec,
                         camera_id=camera_id,
-                        image_file_name=image_file_name)
-        return camera_extrinsics
+                        image_file_name=image_file_name))
+        return colmap_images
 
     @staticmethod
-    def load_from_bin(bin_file_path: str) -> dict[int, ColmapImage]:
+    def load_from_bin(bin_file_path: str) -> list[ColmapImage]:
         """
         see: src/base/reconstruction.cc
             void Reconstruction::WriteCamerasBinary(const std::string& path)
             void Reconstruction::ReadCamerasBinary(const std::string& path)
         """
-        camera_extrinsics = {}
+        colmap_images = []
         with open(bin_file_path, "rb") as fid:
             num_reg_images = colmap_binary_read_next_bytes(
                 fid=fid,
@@ -78,10 +78,10 @@ class ColmapImageSerializer:
                     format_char_sequence=("ddq" * num_pts))
                 # pts2d = np.column_stack([tuple(map(float, pts_infos[0::3])), tuple(map(float, pts_infos[1::3]))])
                 # pts3d_ids = np.array(tuple(map(int, pts_infos[2::3])))
-                camera_extrinsics[image_id] = ColmapImage(
+                colmap_images.append(ColmapImage(
                     image_id=image_id,
                     qvec=qvec,
                     tvec=tvec,
                     camera_id=camera_id,
-                    image_file_name=image_file_name)
-        return camera_extrinsics
+                    image_file_name=image_file_name))
+        return colmap_images

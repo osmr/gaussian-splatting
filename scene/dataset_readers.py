@@ -22,8 +22,8 @@ from utils.sh_utils import SH2RGB
 from scene.basic_point_cloud import BasicPointCloud
 from scene.basic_point_cloud_serializer import BasicPointCloudSerializer
 from scene.colmap_point_cloud_serializer import ColmapPointCloudSerializer
-from scene.colmap_camera_serializer import ColmapCameraSerializer
-from scene.colmap_image_serializer import ColmapImageSerializer
+from scene.colmap_camera_serializer import ColmapCameraSerializer, ColmapCamera
+from scene.colmap_image_serializer import ColmapImageSerializer, ColmapImage
 from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
@@ -53,24 +53,25 @@ def get_nerf_pp_norm(cam_infos: list[CameraInfo]) -> dict:
     return {"translate": translate, "radius": radius}
 
 
-def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
-                                         colmap_cam_intrinsics: dict,
+def create_camera_infos_from_colmap_data(colmap_images: list[ColmapImage],
+                                         colmap_cameras: list[ColmapCamera],
                                          depths_params: dict | None,
                                          images_folder: str,
                                          depths_folder: str | None,
                                          test_cam_names_list: list[str]) -> list[CameraInfo]:
+    colmap_cameras_dict = {c.id: c for c in colmap_cameras}
     cam_infos = []
-    for idx, key in enumerate(colmap_cam_extrinsics):
+    for idx, colmap_image in enumerate(colmap_images):
         sys.stdout.write("\r")
         # logging.info('\r')
 
         # the exact output you're looking for:
-        sys.stdout.write("Reading camera {}/{}".format(idx + 1, len(colmap_cam_extrinsics)))
+        sys.stdout.write("Reading camera {}/{}".format(idx + 1, len(colmap_images)))
         sys.stdout.flush()
         # logging.info("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
 
-        extrinsics = colmap_cam_extrinsics[key]
-        intrinsics = colmap_cam_intrinsics[extrinsics.camera_id]
+        extrinsics = colmap_image
+        intrinsics = colmap_cameras_dict[extrinsics.camera_id]
         height = intrinsics.height
         width = intrinsics.width
 
@@ -96,7 +97,7 @@ def create_camera_infos_from_colmap_data(colmap_cam_extrinsics: dict,
             try:
                 depth_params = depths_params[extrinsics.name[:-n_remove]]
             except Exception:
-                logging.info("\n{} not found in depths_params".format(key))
+                logging.info("\n{} not found in depths_params".format(colmap_image))
 
         image_file_path = os.path.join(images_folder, extrinsics.image_file_name)
         image_file_name = extrinsics.image_file_name
@@ -140,12 +141,12 @@ def extract_scene_info_from_colmap(data_dir_path: str,
     colmap_images_bin_file_path = "{}.{}".format(colmap_images_file_stem_path, colmap_bin_file_ext)
     if os.path.exists(colmap_images_bin_file_path):
         colmap_cameras_bin_file_path = "{}.{}".format(colmap_cameras_file_stem_path, colmap_bin_file_ext)
-        colmap_shots = ColmapImageSerializer.load_from_bin(bin_file_path=colmap_images_bin_file_path)
+        colmap_images = ColmapImageSerializer.load_from_bin(bin_file_path=colmap_images_bin_file_path)
         colmap_cameras = ColmapCameraSerializer.load_from_bin(bin_file_path=colmap_cameras_bin_file_path)
     else:
         colmap_images_txt_file_path = "{}.{}".format(colmap_images_file_stem_path, colmap_txt_file_ext)
         colmap_cameras_txt_file_path = "{}.{}".format(colmap_cameras_file_stem_path, colmap_txt_file_ext)
-        colmap_shots = ColmapImageSerializer.load_from_txt(txt_file_path=colmap_images_txt_file_path)
+        colmap_images = ColmapImageSerializer.load_from_txt(txt_file_path=colmap_images_txt_file_path)
         colmap_cameras = ColmapCameraSerializer.load_from_txt(txt_file_path=colmap_cameras_txt_file_path)
 
     depth_params_file_path = os.path.join(colmap_metainfo_files_dir_path, "depth_params.json")
@@ -174,7 +175,7 @@ def extract_scene_info_from_colmap(data_dir_path: str,
             llff_hold = 8
         if llff_hold:
             logging.info("------------LLFF HOLD-------------")
-            cam_names = [colmap_shots[cam_id].name for cam_id in colmap_shots]
+            cam_names = [colmap_image.image_file_name for colmap_image in colmap_images]
             cam_names = sorted(cam_names)
             test_cam_names_list = [name for idx, name in enumerate(cam_names) if idx % llff_hold == 0]
         else:
@@ -185,8 +186,8 @@ def extract_scene_info_from_colmap(data_dir_path: str,
 
     reading_dir = "images" if images_dir_name is None else images_dir_name
     cam_infos_unsorted = create_camera_infos_from_colmap_data(
-        colmap_cam_extrinsics=colmap_shots,
-        colmap_cam_intrinsics=colmap_cameras,
+        colmap_images=colmap_images,
+        colmap_cameras=colmap_cameras,
         depths_params=depths_params,
         images_folder=os.path.join(data_dir_path, reading_dir),
         depths_folder=os.path.join(data_dir_path, depths_dir_name) if depths_dir_name else None,

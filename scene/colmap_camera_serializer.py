@@ -25,11 +25,11 @@ CAMERA_MODEL_IDS = {camera_model.model_id: camera_model for camera_model in CAME
 class ColmapCameraSerializer:
 
     @staticmethod
-    def load_from_txt(txt_file_path: str) -> dict[int, ColmapCamera]:
+    def load_from_txt(txt_file_path: str) -> list[ColmapCamera]:
         """
         Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
         """
-        camera_intrinsics = {}
+        colmap_cameras = []
         with open(txt_file_path, "r") as fid:
             while True:
                 line = fid.readline()
@@ -43,22 +43,23 @@ class ColmapCameraSerializer:
                     width = int(elements[2])
                     height = int(elements[3])
                     params = np.array(tuple(map(float, elements[4:])))
-                    camera_intrinsics[camera_id] = ColmapCamera(
+                    colmap_cameras.append(ColmapCamera(
                         id=camera_id,
                         model_name=model_name,
                         width=width,
                         height=height,
-                        params=params)
-        return camera_intrinsics
+                        params=params))
+        assert (len(colmap_cameras) == len(set([c.id for c in colmap_cameras])))
+        return colmap_cameras
 
     @staticmethod
-    def load_from_bin(bin_file_path: str) -> dict[int, ColmapCamera]:
+    def load_from_bin(bin_file_path: str) -> list[ColmapCamera]:
         """
         see: src/base/reconstruction.cc
             void Reconstruction::WriteCamerasBinary(const std::string& path)
             void Reconstruction::ReadCamerasBinary(const std::string& path)
         """
-        camera_intrinsics = {}
+        colmap_cameras = []
         with open(bin_file_path, "rb") as fid:
             num_cameras = colmap_binary_read_next_bytes(
                 fid=fid,
@@ -79,11 +80,11 @@ class ColmapCameraSerializer:
                     fid=fid,
                     num_bytes=(8 * num_params),
                     format_char_sequence=("d" * num_params))
-                camera_intrinsics[camera_id] = ColmapCamera(
+                colmap_cameras.append(ColmapCamera(
                     id=camera_id,
                     model_name=model_name,
                     width=width,
                     height=height,
-                    params=np.array(params))
-            assert (len(camera_intrinsics) == num_cameras)
-        return camera_intrinsics
+                    params=np.array(params)))
+        assert (len(colmap_cameras) == len(set([c.id for c in colmap_cameras])))
+        return colmap_cameras
