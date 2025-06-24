@@ -25,7 +25,7 @@ def render(viewpoint_camera: Camera,
            scaling_modifier: float = 1.0,
            separate_sh: bool = False,
            override_color=None,
-           use_trained_exp: bool = False):
+           use_trained_exp: bool = False) -> dict:
     """
     Render the scene. 
     

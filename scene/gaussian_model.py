@@ -272,7 +272,7 @@ class GaussianModel:
         return optimizable_tensors
 
     def _prune_optimizer(self,
-                         mask: torch.tensor):
+                         mask: torch.Tensor):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
             stored_state = self.optimizer.state.get(group['params'][0], None)
@@ -291,7 +291,7 @@ class GaussianModel:
         return optimizable_tensors
 
     def prune_points(self,
-                     mask: torch.tensor):
+                     mask: torch.Tensor):
         valid_points_mask = ~mask
         optimizable_tensors = self._prune_optimizer(valid_points_mask)
 
@@ -336,13 +336,13 @@ class GaussianModel:
         return optimizable_tensors
 
     def densification_postfix(self,
-                              new_xyz: torch.tensor,
-                              new_features_dc: torch.tensor,
-                              new_features_rest: torch.tensor,
-                              new_opacities: torch.tensor,
-                              new_scaling: torch.tensor,
-                              new_rotation: torch.tensor,
-                              new_tmp_radii: torch.tensor):
+                              new_xyz: torch.Tensor,
+                              new_features_dc: torch.Tensor,
+                              new_features_rest: torch.Tensor,
+                              new_opacities: torch.Tensor,
+                              new_scaling: torch.Tensor,
+                              new_rotation: torch.Tensor,
+                              new_tmp_radii: torch.Tensor):
         d = {
             "xyz": new_xyz,
             "f_dc": new_features_dc,
@@ -366,7 +366,7 @@ class GaussianModel:
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
 
     def densify_and_split(self,
-                          grads: torch.tensor,
+                          grads: torch.Tensor,
                           grad_threshold: float,
                           scene_extent: float,
                           N: int = 2):
@@ -406,7 +406,7 @@ class GaussianModel:
         self.prune_points(prune_filter)
 
     def densify_and_clone(self,
-                          grads: torch.tensor,
+                          grads: torch.Tensor,
                           grad_threshold: float,
                           scene_extent: float):
         # Extract points that satisfy the gradient condition
@@ -438,7 +438,7 @@ class GaussianModel:
                           min_opacity: float,
                           extent: float,
                           max_screen_size: float | None,
-                          radii: torch.tensor):
+                          radii: torch.Tensor):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
 
@@ -458,8 +458,8 @@ class GaussianModel:
         torch.cuda.empty_cache()
 
     def add_densification_stats(self,
-                                viewspace_point_tensor: torch.tensor,
-                                update_filter: torch.tensor):
+                                viewspace_point_tensor: torch.Tensor,
+                                update_filter: torch.Tensor):
         self.xyz_gradient_accum[update_filter] += torch.norm(
             viewspace_point_tensor.grad[update_filter, :2],
             dim=-1,

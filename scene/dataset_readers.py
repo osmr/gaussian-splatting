@@ -28,7 +28,6 @@ from scene.camera_info import CameraInfo
 from scene.scene_info import SceneInfo
 
 
-
 def get_nerf_pp_norm(cam_infos: list[CameraInfo]) -> dict:
     def get_center_and_diag(cam_centers):
         cam_centers = np.hstack(cam_centers)

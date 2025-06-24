@@ -80,8 +80,8 @@ def prepare_tb_logger(model_path: str,
 
 def training_report(tb_writer: Any | None,
                     iteration: int,
-                    Ll1: torch.tensor,
-                    loss: torch.tensor,
+                    Ll1: torch.Tensor,
+                    loss: torch.Tensor,
                     l1_loss: Callable[..., float],
                     elapsed: float,
                     testing_iterations: list[int],
@@ -268,6 +268,7 @@ def training(model_params: ModelParams,
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
         Ll1 = l1_loss(image, gt_image)
+        # if False:
         if FUSED_SSIM_AVAILABLE:
             ssim_value = fused_ssim(image.unsqueeze(0), gt_image.unsqueeze(0))
         else:
