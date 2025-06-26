@@ -47,19 +47,22 @@ def l2_loss(network_output, gt):
     return ((network_output - gt) ** 2).mean()
 
 
-def gaussian(window_size: int,
-             sigma: float):
-    gauss = torch.Tensor([exp(-(x - window_size // 2) ** 2 / float(2 * sigma ** 2)) for x in range(window_size)])
+def calc_1d_gaussian(window_size: int,
+                     sigma: float):
+    assert (window_size % 2 == 1)
+    mu = window_size // 2
+    k = -0.5 / (sigma ** 2)
+    gauss = torch.FloatTensor([exp(k * ((x - mu) ** 2)) for x in range(window_size)])
     return gauss / gauss.sum()
 
 
 def create_window(window_size: int,
-                  channel: int):
-    _1D_window = gaussian(
+                  num_channels: int):
+    _1D_window = calc_1d_gaussian(
         window_size=window_size,
         sigma=1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t()).float().unsqueeze(0).unsqueeze(0)
-    window = Variable(_2D_window.expand(channel, 1, window_size, window_size).contiguous())
+    window = Variable(_2D_window.expand(num_channels, 1, window_size, window_size).contiguous())
     return window
 
 
@@ -67,10 +70,10 @@ def ssim(img1: torch.Tensor,
          img2: torch.Tensor,
          window_size: int = 11,
          size_average: bool = True):
-    channel = img1.size(-3)
+    num_channels = img1.size(-3)
     window = create_window(
         window_size=window_size,
-        channel=channel)
+        num_channels=num_channels)
 
     if img1.is_cuda:
         window = window.cuda(img1.get_device())
@@ -81,7 +84,7 @@ def ssim(img1: torch.Tensor,
         img2=img2,
         window=window,
         window_size=window_size,
-        channel=channel,
+        channel=num_channels,
         size_average=size_average)
 
 
