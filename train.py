@@ -16,7 +16,6 @@ import os
 from typing import Callable, Any
 import torch
 from random import randint
-from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render, network_gui
 import sys
 from scene.scene import Scene, GaussianModel
@@ -35,11 +34,13 @@ try:
 except ImportError:
     TENSORBOARD_FOUND = False
 
+from loss.l1_loss import l1_loss
 try:
     from fused_ssim import fused_ssim
     FUSED_SSIM_AVAILABLE = True
 except Exception:
     FUSED_SSIM_AVAILABLE = False
+    from loss.ssim_loss import ssim
 
 try:
     from diff_gaussian_rasterization import SparseGaussianAdam
@@ -267,14 +268,14 @@ def training(model_params: ModelParams,
 
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
-        Ll1 = l1_loss(image, gt_image)
+        l1_value = l1_loss(image, gt_image)
         # if False:
         if FUSED_SSIM_AVAILABLE:
             ssim_value = fused_ssim(image.unsqueeze(0), gt_image.unsqueeze(0))
         else:
             ssim_value = ssim(image, gt_image)
 
-        loss = (1.0 - opt_params.lambda_dssim) * Ll1 + opt_params.lambda_dssim * (1.0 - ssim_value)
+        loss = (1.0 - opt_params.lambda_dssim) * l1_value + opt_params.lambda_dssim * (1.0 - ssim_value)
 
         # Depth regularization
         Ll1depth_pure = 0.0
@@ -309,7 +310,7 @@ def training(model_params: ModelParams,
             training_report(
                 tb_writer=tb_writer,
                 iteration=iteration,
-                Ll1=Ll1,
+                Ll1=l1_value,
                 loss=loss,
                 l1_loss=l1_loss,
                 elapsed=iter_start.elapsed_time(iter_end),
