@@ -1,31 +1,20 @@
-#
-# Copyright (C) 2023, Inria
-# GRAPHDECO research group, https://team.inria.fr/graphdeco
-# All rights reserved.
-#
-# This software is free for non-commercial, research and evaluation use 
-# under the terms of the LICENSE.md file.
-#
-# For inquiries contact  george.drettakis@inria.fr
-#
-
 import torch
 import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.camera import Camera
-
 from arguments.pipline_params import PipelineParams
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 
-def render(viewpoint_camera: Camera,
-           pc: GaussianModel,
-           pipe: PipelineParams,
-           bg_color: torch.tensor,
-           scaling_modifier: float = 1.0,
-           separate_sh: bool = False,
-           override_color=None,
-           use_trained_exp: bool = False) -> dict:
+
+def do_render(viewpoint_camera: Camera,
+              pc: GaussianModel,
+              pipe: PipelineParams,
+              bg_color: torch.tensor,
+              scaling_modifier: float = 1.0,
+              separate_sh: bool = False,
+              override_color=None,
+              use_trained_exp: bool = False) -> dict:
     """
     Render the scene. 
     
@@ -61,8 +50,8 @@ def render(viewpoint_camera: Camera,
 
     rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 
-    means3D = pc.get_xyz
-    means2D = screenspace_points
+    means_3d = pc.get_xyz
+    means_2d = screenspace_points
     opacity = pc.get_opacity
 
     # If precomputed 3d covariance is provided, use it. If not, then it will be computed from
@@ -99,8 +88,8 @@ def render(viewpoint_camera: Camera,
     # Rasterize visible Gaussians to image, obtain their radii (on screen). 
     if separate_sh:
         rendered_image, radii, depth_image = rasterizer(
-            means3D=means3D,
-            means2D=means2D,
+            means3D=means_3d,
+            means2D=means_2d,
             dc=dc,
             shs=shs,
             colors_precomp=colors_precomp,
@@ -110,8 +99,8 @@ def render(viewpoint_camera: Camera,
             cov3D_precomp=cov3D_precomp)
     else:
         rendered_image, radii, depth_image = rasterizer(
-            means3D=means3D,
-            means2D=means2D,
+            means3D=means_3d,
+            means2D=means_2d,
             shs=shs,
             colors_precomp=colors_precomp,
             opacities=opacity,
@@ -122,7 +111,8 @@ def render(viewpoint_camera: Camera,
     # Apply exposure to rendered image (training only)
     if use_trained_exp:
         exposure = pc.get_exposure_from_name(viewpoint_camera.image_name)
-        rendered_image = torch.matmul(rendered_image.permute(1, 2, 0), exposure[:3, :3]).permute(2, 0, 1) + exposure[:3, 3,   None, None]
+        rendered_image = (torch.matmul(rendered_image.permute(1, 2, 0), exposure[:3, :3]).permute(2, 0, 1) +
+                          exposure[:3, 3, None, None])
 
     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
     # They will be excluded from value updates used in the splitting criteria.
