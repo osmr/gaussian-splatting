@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-# from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
+from torchmetrics.image.ssim import StructuralSimilarityIndexMeasure
 
 def calc_gaussian_1d(window_size: int,
                      sigma: float,

@@ -8,9 +8,9 @@
 [submodule "SIBR_viewers"]
 	path = SIBR_viewers
 	url = https://gitlab.inria.fr/sibr/sibr_core.git
-[submodule "submodules/fused-ssim"]
-	path = submodules/fused-ssim
-	url = https://github.com/rahul-goel/fused-ssim.git
 [submodule "submodules/cvutil"]
 	path = submodules/cvutil
 	url = git@github.com:osmr/cvutil.git
+[submodule "submodules/fssim"]
+	path = submodules/fssim
+	url = git@github.com:osmr/fssim.git

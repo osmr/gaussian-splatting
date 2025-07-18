@@ -43,7 +43,7 @@ pip install --upgrade pip setuptools wheel
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn
-pip install submodules/fused-ssim
+pip install -e submodules/fssim
 pip install -e submodules/cvutil
 pip install tqdm
 pip install plyfile
