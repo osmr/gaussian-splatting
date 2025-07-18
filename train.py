@@ -37,7 +37,7 @@ except ImportError:
 
 from loss.l1_loss import l1_loss
 try:
-    from fused_ssim import fused_ssim
+    from fssim import ssim as fused_ssim
     FUSED_SSIM_AVAILABLE = True
 except Exception:
     FUSED_SSIM_AVAILABLE = False
